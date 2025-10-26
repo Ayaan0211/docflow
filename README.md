@@ -39,6 +39,10 @@ Our project is essentially a clone of Google Docs and its features. The web appl
 
 ### Clean UI/UX with external libraries
 
+### Exporting files and possibly importing files
+
+### Spell Check
+
 ---
 
 ## Tech Stack
