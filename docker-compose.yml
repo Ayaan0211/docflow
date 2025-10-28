@@ -26,19 +26,17 @@ services:
        - ./certs:/etc/nginx/certs:rw
        - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-        - DEFAULT_EMAIL=CHANGE THIS
+        - DEFAULT_EMAIL=milen.thomas@mail.utoronto.ca
     networks:
       - proxy
 
   frontend:
-    image: nginx:1.29-alpine-slim
+    build: frontend
+    image: frontend
     container_name: frontend
     restart: unless-stopped
     expose:
-        - "80"
-    volumes:
-      - ./frontend/src:/usr/share/nginx/html:ro
-      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+        - "3000"
     networks:
       - proxy
     environment:
@@ -50,19 +48,24 @@ services:
     image: backend
     container_name: backend
     restart: unless-stopped
-    volumes:
-      - CHANGE THIS
-      - ./db:/home/app/db:rw
-      - ./uploads:/home/app/uploads:rw
+    expose:
+      - "8080"
     networks:
       - proxy
-      
-  # mongo:
-  #   image: mongo
-  #   container_name: mongo
-  #   restart: always
-  #   volumes:
-  #     - ./data:/data
+
+  db:
+    image: postgres:18
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /data/postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db:/data/postgres
+    networks:
+      - proxy
 
 networks:
   proxy:
