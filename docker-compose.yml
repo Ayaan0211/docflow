@@ -40,8 +40,8 @@ services:
     networks:
       - proxy
     environment:
-      - VIRTUAL_HOST=CHANGETHIS
-      - LETSENCRYPT_HOST=CHANGETHIS
+      - VIRTUAL_HOST=project-docflow.amazingcloud.space
+      - LETSENCRYPT_HOST=project-docflow.amazingcloud.space
 
   backend:
     build: backend
