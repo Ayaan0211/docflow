@@ -70,4 +70,7 @@ services:
 networks:
   proxy:
     driver: bridge
+
+volumes:
+  db:
         
