@@ -16,11 +16,11 @@ const saltRounds = 10;
 const { Pool } = pkg;
 
 const pool = new Pool({
-    host: process.env.DB_HOST || "postgres",
-    port: process.env.DB_PORT || 5432,
-    user: process.env.DB_USER || process.env.POSTGRES_USER,
-    password: process.env.DB_PASSWORD || process.env.POSTGRES_PASSWORD,
-    database: process.env.DB_NAME || process.env.POSTGRES_DB
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
 });
 
 // initalize tabels
