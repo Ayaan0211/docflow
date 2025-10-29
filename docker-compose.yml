@@ -48,6 +48,8 @@ services:
     image: backend
     container_name: backend
     restart: unless-stopped
+    depends_on:
+      - db
     expose:
       - "8080"
     networks:
