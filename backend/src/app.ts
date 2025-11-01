@@ -68,12 +68,28 @@ function createSharedDocumentsTable() {
     .catch(err => console.error("❌ Error creating shared documents table:", err.message));
 }
 
+function createDocumentVersionsTable() {
+  return pool.query(`
+    CREATE TABLE IF NOT EXISTS document_versions (
+    version_id SERIAL PRIMARY KEY,
+    document_id INTEGER REFERENCES documents(document_id) ON DELETE CASCADE,
+    edited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    `)
+    .then(() => console.log("✅ Documents Versions table ready"))
+    .catch(err => console.error("❌ Error creating document versions table:", err.message));
+}
+
 // indexes for faster queries
 function createIndexes() {
   return pool.query(`
     CREATE INDEX IF NOT EXISTS idx_documents_owner_id ON documents(owner_id);
     CREATE INDEX IF NOT EXISTS idx_shared_documents_user_id ON shared_documents(user_id);
     CREATE INDEX IF NOT EXISTS idx_shared_documents_document_id ON shared_documents(document_id);
+    CREATE INDEX IF NOT EXISTS idx_versions_document_id ON document_versions(document_id);
   `)
   .then(() => console.log("✅ Indexes ready"))
   .catch(err => console.error("❌ Error creating indexes:", err.message));
@@ -83,6 +99,7 @@ function createIndexes() {
 createUsersTable()
   .then(createDocumentsTable)
   .then(createSharedDocumentsTable)
+  .then(createDocumentVersionsTable)
   .then(createIndexes)
   .then(() => console.log("✅ Database initialization complete"))
   .catch(err => console.error("❌ Database initialization failed:", err.message));
@@ -337,6 +354,69 @@ app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCre
     });
 });
 
+// restore a specifc version (only owners can restore a version)
+app.post("/api/documents/:documentId/versions/:versionId", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
+  const docId = req.params.documentId;
+  const versionId = req.params.versionId;
+  pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
+      if (err) return res.status(500).end(err);
+      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      pool.query(`
+        SELECT owner_id
+        FROM documents
+        WHERE document_id = $1
+        `, [docId], (err, ownerIdRow) => {
+          if (err) return res.status(500).end(err);
+          if (ownerIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+          const ownerId = ownerIdRow.rows[0].owner_id;
+          if (userId !== ownerId) return res.status(403).end("You don't have permission to restore this version");
+          // save current version of the document and then restore the specififed version
+          pool.query(`
+            SELECT title, content
+            FROM document_versions
+            WHERE version_id = $1
+            `, [versionId], (err, versionRow) => {
+              if (err) return res.status(500).end(err);
+              if (versionRow.rows.length === 0) return res.status(400).end("Version not found");
+              const version_title = versionRow.rows[0].title;
+              const version_content = versionRow.rows[0].content;
+              pool.query(`
+                SELECT title, content
+                FROM documents
+                WHERE document_id = $1
+                `, [docId], (err, currentDocumentRow) => {
+                  if (err) return res.status(500).end(err);
+                  if (currentDocumentRow.rows.length === 0) return res.status(400).end("Document not found");
+                  const curr_title = currentDocumentRow.rows[0].title;
+                  const curr_content = currentDocumentRow.rows[0].content;
+                  pool.query(`
+                    INSERT INTO document_versions(document_id, edited_by, title, content)
+                    VALUES ($1, $2, $3, $4)
+                    `, [docId, userId, curr_title, curr_content], (err) => {
+                      if (err) return res.status(500).end(err);
+                      pool.query(`
+                        UPDATE documents
+                        SET title = $1, content = $2, last_modified = CURRENT_TIMESTAMP
+                        WHERE document_id = $3
+                        RETURNING *
+                        `, [version_title, version_content, docId], (err, updatedDoc) => {
+                          if (err) return res.status(500).end(err);
+                          res.json({
+                            document: updatedDoc.rows[0]
+                          })
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+
 // READ
 app.get("/api/session/", function(req: Request, res: Response, next: NextFunction) {
   res.json({
@@ -390,7 +470,7 @@ app.get("/api/documents/:documentId/", isAuthenticated, function(req: Request, r
   const docId = req.params.documentId;
   pool.query(`
     SELECT *
-    FROM DOCUMENTS
+    FROM documents
     WHERE document_id = $1
     `, [docId], (err, document) => {
       if (err) return res.status(500).end(err);
@@ -398,6 +478,77 @@ app.get("/api/documents/:documentId/", isAuthenticated, function(req: Request, r
         return res
         .status(404)
         .end("Document " + docId + " does not exist.");
+      }
+      res.json({
+        document: document.rows[0]
+      });
+    });
+});
+
+// get version history paginated, only owner should see document history
+app.get("/api/documents/:documentId/versions/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
+  const docId = req.params.documentId;
+  const page = parseInt(req.query.page as string);
+  const maxVersions = parseInt(req.query.maxVersions as string);
+  const offset = (page - 1) * maxVersions;
+  pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
+      if (err) return res.status(500).end(err);
+      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      pool.query(`
+        SELECT owner_id
+        FROM documents
+        WHERE document_id = $1
+        `, [docId], (err, ownerIdRow) => {
+          if (err) return res.status(500).end(err);
+          if (ownerIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+          const ownerId = ownerIdRow.rows[0].owner_id;
+          if (userId !== ownerId) return res.status(403).end("You don't have permission to see the version history");
+          pool.query(`
+            SELECT COUNT(version_id)
+            FROM document_versions
+            WHERE document_id = $1
+            `, [docId], (err, totalRowsRow) => {
+              if (err) return res.status(500).end(err);
+              const totalVersions = parseInt(totalRowsRow.rows[0].count);
+              pool.query(`
+                SELECT version_id, edited_by, title, created_at
+                FROM document_versions
+                WHERE document_id = $1
+                ORDER BY created_at DESC
+                LIMIT $2 OFFSET $3
+                `, [docId, maxVersions, offset], (err, result) => {
+                  if (err) return res.status(500).end(err);
+                  res.json({
+                    hasPrev: page > 1,
+                    hasNext: (page * maxVersions) < totalVersions,
+                    documentId: docId,
+                    versions: result.rows
+                  })
+                });
+            });
+        });
+    });
+});
+
+// get single version history
+app.get("/api/documents/:documentId/versions/:versionId", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
+  const docId = req.params.documentId;
+  const versionId = req.params.versionId;
+  return pool.query(`
+    SELECT *
+    FROM document_versions
+    WHERE version_id = $1
+    `, [versionId], (err, document) => {
+      if (err) return res.status(500).end(err);
+      if (document.rows.length === 0) {
+        return res
+        .status(404)
+        .end("Document with ID " + docId + " with version ID" + versionId +"does not exist.");
       }
       res.json({
         document: document.rows[0]
@@ -421,24 +572,32 @@ app.patch("/api/documents/:documentId/", isAuthenticated, sanitizeDocument, func
       if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
       const userId = userIdRow.rows[0].id;
       pool.query(`
-        SELECT 1
+        SELECT d.document_id, d.title, d.content
         FROM documents d
         LEFT JOIN shared_documents s ON d.document_id = s.document_id
         WHERE d.document_id = $1 AND (d.owner_id = $2 OR (s.user_id = $2 AND s.permission = 'edit'))
-        `, [docId, userId], (err, permissionResultRow) => {
+        `, [docId, userId], (err, docResult) => {
           if (err) return res.status(500).end(err);
-          if (permissionResultRow.rows.length === 0) return res.status(403).end("You don't have permission to edit this document");
+          if (docResult.rows.length === 0) return res.status(403).end("You don't have permission to edit this document");
+          const oldDoc = docResult.rows[0];
+          // save old version for version history
           pool.query(`
-            UPDATE documents
-            SET content = $1, title = $2, last_modified = CURRENT_TIMESTAMP
-            WHERE document_id = $3
-            RETURNING document_id, title, content, last_modified
-            `, [content, title, docId], (err, document) => {
+            INSERT INTO document_versions(document_id, edited_by, title, content)
+            VALUES ($1, $2, $3, $4)
+            `, [docId, userId, oldDoc.title, oldDoc.content], (err) => {
               if (err) return res.status(500).end(err);
-              res.json({
-                document: document.rows[0]
-              });
-            })
+              pool.query(`
+                UPDATE documents
+                SET content = $1, title = $2, last_modified = CURRENT_TIMESTAMP
+                WHERE document_id = $3
+                RETURNING *
+                `, [content, title, docId], (err, document) => {
+                  if (err) return res.status(500).end(err);
+                  res.json({
+                    document: document.rows[0]
+                  });
+                });
+            });
         });
     });
 });
