@@ -2,25 +2,23 @@ import 'dotenv/config';
 import { createServer } from "http";
 import express from "express";
 import session from "express-session";
-import { resolve } from "path";
-import fs from "fs";
-import path from "path";
-import { rmSync } from "fs";
 import { compare, genSalt, hash } from "bcrypt";
 import cors from "cors";
-import pkg from "pg";
+import { Pool } from "pg";
 import validator from "validator";
 import passport from "passport";
-import { Strategy as GoogleStrategy, Strategy } from "passport-google-oauth20";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Request, Response, NextFunction } from "express";
+import { Profile } from "passport-google-oauth20";
+import { VerifyCallback } from "passport-oauth2";
 
 const PORT = 8080;
 const app = express();
 const saltRounds = 10;
-const { Pool } = pkg;
 
 const pool = new Pool({
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME
@@ -94,7 +92,7 @@ app.use(express.json());
 app.set('trust proxy', 1);
 
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET!,
   resave: false,
   saveUninitialized: true,
   cookie: { 
@@ -103,7 +101,7 @@ app.use(session({
   }
 }));
 
-app.use(function (req, res, next) {
+app.use(function (req: Request, res: Response, next: NextFunction) {
   req.email = req.session.email ? req.session.email : null;
   console.log("HTTP request", req.email, req.method, req.url, req.body);
   next();
@@ -112,9 +110,9 @@ app.use(function (req, res, next) {
 app.use(express.urlencoded({ extended: false }));
 
 passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "/api/oauth2/redirect/google/"}, function verify(accessToken, refreshToken, profile, cb) {
+  clientID: process.env.GOOGLE_CLIENT_ID!,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  callbackURL: "/api/oauth2/redirect/google/"}, function verify(accessToken: string, refreshToken: string, profile: Profile, cb: VerifyCallback) {
     const googleId = profile.id;
     const name = profile.displayName;
     const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
@@ -149,36 +147,36 @@ passport.deserializeUser(function (id, cb) {
 
 if (process.env.NODE_ENV=="dev") app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 
-function isAuthenticated(req, res, next) {
+function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (!req.session.email) return res.status(401).end("access denied");
   next();
 }
 
-const checkCredentials = function(req, res, next) {
+const checkCredentials = function(req: Request, res: Response, next: NextFunction) {
   if (!validator.isAlphanumeric(req.body.username)) return res.status(400).end("bad username input");
   if (!validator.isEmail(req.body.email)) return res.status(400).end("bad email input");
   next();
 };
 
-const checkEmail = function(req, res, next) {
+const checkEmail = function(req: Request, res: Response, next: NextFunction) {
   if (!validator.isEmail(req.body.email)) return res.status(400).end("bad email input");
   next();
 }
 
-const sanitizeDocument = function(req, res, next) {
+const sanitizeDocument = function(req: Request, res: Response, next: NextFunction) {
   req.body.title = validator.escape(req.body.title);
   req.body.content = validator.escape(req.body.content);
   next();
 }
 
-const sanitizeSharingCredentials = function(req, res, next) {
+const sanitizeSharingCredentials = function(req: Request, res: Response, next: NextFunction) {
   if (!validator.isEmail(req.body.email)) return res.status(400).end("Invalid email format");
   req.body.permission = validator.escape(req.body.permission);
   next();
 }
 
 // sign up local auth
-app.post("/api/signup/", checkCredentials, function(req, res, next) {
+app.post("/api/signup/", checkCredentials, function(req: Request, res: Response, next: NextFunction) {
   // extract data from HTTP request
   if (!('username' in req.body)) return res.status(400).end('username is missing');
   if (!('email' in req.body)) return res.status(400).end('email is missing');
@@ -209,7 +207,7 @@ app.post("/api/signup/", checkCredentials, function(req, res, next) {
 });
 
 // sign in local auth
-app.post("/api/signin/", checkEmail, function (req, res, next){
+app.post("/api/signin/", checkEmail, function (req: Request, res: Response, next: NextFunction){
   // extract data from HTTP request
   if (!('email' in req.body)) return res.status(400).end('email is missing');
   if (!('password' in req.body)) return res.status(400).end('password is missing');
@@ -232,7 +230,7 @@ app.post("/api/signin/", checkEmail, function (req, res, next){
 });
 
 // sign in google auth
-app.get("/api/oauth2/google/", (req, res, next) => {
+app.get("/api/oauth2/google/", (req: Request, res: Response, next: NextFunction) => {
   // temp set it to lax so we can get the cookies from oauth
   req.session.cookie.sameSite = "lax";
   req.session.save(() => next());
@@ -240,16 +238,16 @@ app.get("/api/oauth2/google/", (req, res, next) => {
 
 // sign in redirect
 app.get("/api/oauth2/redirect/google/", 
-  passport.authenticate("google", { failureRedirect: "/"}), (req, res) => {
+  passport.authenticate("google", { failureRedirect: "/"}), (req: Request, res) => {
     req.session.cookie.sameSite = "strict";
-    req.session.email = req.user.email
+    req.session.email = req.user!.email;
     delete req.user;
     res.redirect("/");
   }
 );
 
 // sign out
-app.get("/api/signout/", isAuthenticated, function (req, res, next) {
+app.get("/api/signout/", isAuthenticated, function (req: Request, res: Response, next: NextFunction) {
   req.session.destroy(function(err) {
     if (err) return res.status(500).end(err);
     res.redirect("/");
@@ -258,7 +256,7 @@ app.get("/api/signout/", isAuthenticated, function (req, res, next) {
 
 // CREATE
 // make a document
-app.post("/api/user/documents/", isAuthenticated, sanitizeDocument, function(req, res, next) {
+app.post("/api/user/documents/", isAuthenticated, sanitizeDocument, function(req: Request, res: Response, next: NextFunction) {
   if (!req.body.title || !req.body.content) return res.status(400).end("Missing title or content");
   const title = req.body.title;
   const content = req.body.content;
@@ -283,7 +281,7 @@ app.post("/api/user/documents/", isAuthenticated, sanitizeDocument, function(req
 });
 
 // share a document
-app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCredentials, function(req, res, next) {
+app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCredentials, function(req: Request, res: Response, next: NextFunction) {
   const otherEmail = req.body.email;
   const permission = req.body.permission;
   const docId = req.params.documentId;
@@ -340,7 +338,7 @@ app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCre
 });
 
 // READ
-app.get("/api/session/", function(req, res, next) {
+app.get("/api/session/", function(req: Request, res: Response, next: NextFunction) {
   res.json({
     isLoggedIn: req.email ? true : false,
     username: req.email
@@ -348,9 +346,9 @@ app.get("/api/session/", function(req, res, next) {
 });
 
 // get documents paginated
-app.get("/api/user/documents/", isAuthenticated, function(req, res, next) {
-  const page = parseInt(req.query.page);
-  const maxDocuments = parseInt(req.query.maxDocuments);
+app.get("/api/user/documents/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
+  const page = parseInt(req.query.page as string);
+  const maxDocuments = parseInt(req.query.maxDocuments as string);
   const offset = (page - 1) * maxDocuments;
   pool.query(`
     SELECT id
@@ -388,7 +386,7 @@ app.get("/api/user/documents/", isAuthenticated, function(req, res, next) {
 });
 
 // get single document
-app.get("/api/documents/:documentId/", isAuthenticated, function(req, res, next) {
+app.get("/api/documents/:documentId/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
   const docId = req.params.documentId;
   pool.query(`
     SELECT *
@@ -409,7 +407,7 @@ app.get("/api/documents/:documentId/", isAuthenticated, function(req, res, next)
 
 // UPDATE
 // update document (if person has edit access)
-app.patch("/api/documents/:documentId/", isAuthenticated, sanitizeDocument, function(req, res, next) {
+app.patch("/api/documents/:documentId/", isAuthenticated, sanitizeDocument, function(req: Request, res: Response, next: NextFunction) {
   if (!req.body.title || !req.body.content) return res.status(400).end("Missing title or content");
   const title = req.body.title;
   const content = req.body.content;
@@ -447,7 +445,7 @@ app.patch("/api/documents/:documentId/", isAuthenticated, sanitizeDocument, func
 
 // DELETE
 // delete document (only owners can delete)
-app.delete("/api/documents/:documentId/", isAuthenticated, function(req, res, next) {
+app.delete("/api/documents/:documentId/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
   const docId = req.params.documentId;
   pool.query(`
     SELECT id
@@ -481,7 +479,7 @@ app.delete("/api/documents/:documentId/", isAuthenticated, function(req, res, ne
 });
 
 // delete other user from document (sharing)
-app.delete("/api/documents/:documentId/users/", isAuthenticated, checkEmail, function(req, res, next) {
+app.delete("/api/documents/:documentId/users/", isAuthenticated, checkEmail, function(req: Request, res: Response, next: NextFunction) {
   if (!('email' in req.body)) return res.status(400).end('email is missing');
   const docId = req.params.documentId;
   pool.query(`
@@ -525,7 +523,12 @@ app.delete("/api/documents/:documentId/users/", isAuthenticated, checkEmail, fun
 
 // RTC
 
-export const server = createServer(app).listen(PORT, function (err) {
-  if (err) console.log(err);
-  else console.log("HTTP server on http://localhost:%s", PORT);
+export const server = createServer(app);
+
+server.listen(PORT, () => {
+  console.log(`✅ HTTP server running on http://localhost:${PORT}`);
+});
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  console.error("❌ Server error:", err);
 });
