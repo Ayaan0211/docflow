@@ -45,7 +45,7 @@ function createDocumentsTable() {
     document_id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
+    content JSONB NOT NULL,
     last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -75,7 +75,7 @@ function createDocumentVersionsTable() {
     document_id INTEGER REFERENCES documents(document_id) ON DELETE CASCADE,
     edited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
+    content JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     `)
@@ -182,7 +182,13 @@ const checkEmail = function(req: Request, res: Response, next: NextFunction) {
 
 const sanitizeDocument = function(req: Request, res: Response, next: NextFunction) {
   req.body.title = validator.escape(req.body.title);
-  req.body.content = validator.escape(req.body.content);
+  try {
+    if (typeof req.body.content === "string") {
+      req.body.content = JSON.parse(req.body.content);
+    }
+  } catch {
+    return res.status(400).end("Invalid content format");
+  }
   next();
 }
 
