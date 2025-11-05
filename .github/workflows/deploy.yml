@@ -14,8 +14,11 @@ jobs:
 
       - name: Prepare SSH key
         run: |
-          echo "${{ secrets.VM_SSH_KEY }}" > key.pem
+          echo "${{ secrets.VM_SSH_KEY_B64 }}" | base64 --decode > key.pem
           chmod 600 key.pem
+
+      - name: Test SSH manually
+        run: ssh -i key.pem -o StrictHostKeyChecking=no root@${{ secrets.VM_HOST }} "echo connected!"
 
       - name: SSH and deploy to VM
         uses: appleboy/ssh-action@v1.2.0
@@ -23,6 +26,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: root
           key_path: key.pem
+          port: 22
           script_stop: true
           debug: true
           script: |
@@ -31,4 +35,5 @@ jobs:
             git pull
             docker compose build
             docker compose up -d
+
 
