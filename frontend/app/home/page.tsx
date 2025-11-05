@@ -17,13 +17,13 @@ const files = [
 export default function Home() {
   return (
     <>
-      <header className="bg-[var(--card)] text-[var(--text)] grid grid-cols-3 items-center px-4 py-6 shadow-md sticky top-0">
+      <header className="grid grid-cols-3 items-center px-4 py-6 shadow-md sticky top-0">
         <div>Currently Signed in As: Test User</div>
         <h1 className="text-[var(--text)] text-center text-3xl font-bold underline italic">
           DocFlow
         </h1>
         <div className="text-right">
-          <button className="bg-[var(--accent)] hover:bg-blue-600 px-4 py-3 text-white rounded-full">
+          <button className="px-4 py-3 text-white rounded-full">
             Signout
             <Image
               className="inline-block ml-2"
@@ -38,8 +38,8 @@ export default function Home() {
 
       <div className="p-8">
         <div className="flex justify-center">
-          <div className="border bg-[var(--card)] p-4 m-2 rounded-xl shadow-lg hover:bg-[#2563EB] w-100 h-50 flex flex-col">
-            <h2 className="text-lg font-semibol text-gray-500 text-center pt-4 pb-2">
+          <div className="card w-100 h-50">
+            <h2 className="text-lg font-semibol text-center pt-4 pb-2">
               Create New
             </h2>
             <Image
@@ -52,18 +52,18 @@ export default function Home() {
           </div>
         </div>
 
-        <h1 className="text-lg italic">Modify Existing Documents:</h1>
+        <h1 className="text-lg italic mb-4">Modify Existing Documents:</h1>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 justify-items-center gap-4">
           {files.map((file) => (
             <div
               key={file.title}
-              className="border border-white bg-[var(--card)] p-4 m-2 rounded-xl shadow-lg hover:bg-[#1a1d21] w-full max-w-100 h-50 flex flex-col"
+              className="card w-full max-w-100 h-50"
             >
               <h2 className="text-lg font-semibold text-center pt-4 pb-2">
                 {file.title}
               </h2>
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-center opacity-70">
                 Last modified: {file.modified}
               </p>
             </div>
