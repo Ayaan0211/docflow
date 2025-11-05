@@ -17,16 +17,7 @@ jobs:
           echo "${{ secrets.VM_SSH_KEY_B64 }}" | base64 --decode | tr -d '\r' > key.pem
           chmod 600 key.pem
 
-      - name: Verify SSH key file
-        run: |
-          head -n 3 key.pem
-          tail -n 2 key.pem
-
-      - name: Test SSH manually
-        run: |
-          ssh -vvv -i key.pem -o StrictHostKeyChecking=no root@${{ secrets.VM_HOST }} "echo connected!"
-
-      - name: SSH and deploy to VM
+      - name: Deploy to VM
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VM_HOST }}
@@ -34,7 +25,6 @@ jobs:
           key_path: key.pem
           port: 22
           script_stop: true
-          debug: true
           script: |
             cd project-docflow/
             docker compose down
