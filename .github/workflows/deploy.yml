@@ -1,19 +1,34 @@
-- name: Prepare SSH key
-  run: |
-    echo "${{ secrets.VM_SSH_KEY }}" > key.pem
-    chmod 600 key.pem
+name: 🚀 Auto Deploy to VM
 
-- name: Deploy to VM
-  uses: appleboy/ssh-action@v1.2.0
-  with:
-    host: ${{ secrets.VM_HOST }}
-    username: root
-    key_path: key.pem
-    script_stop: true
-    debug: true
-    script: |
-      cd project-docflow/
-      docker compose down
-      git pull
-      docker compose build
-      docker compose up -d
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        run: |
+          echo "${{ secrets.VM_SSH_KEY }}" > key.pem
+          chmod 600 key.pem
+
+      - name: SSH and deploy to VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: root
+          key_path: key.pem
+          script_stop: true
+          debug: true
+          script: |
+            cd project-docflow/
+            docker compose down
+            git pull
+            docker compose build
+            docker compose up -d
+
