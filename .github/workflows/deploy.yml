@@ -10,11 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: SSH into VM and run deploy script
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
+          username: root
           key: ${{ secrets.VM_SSH_KEY }}
+          script_stop: true
           script: |
             cd project-docflow/
             docker compose down
