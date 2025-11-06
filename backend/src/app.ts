@@ -74,7 +74,6 @@ function createDocumentVersionsTable() {
     version_id SERIAL PRIMARY KEY,
     document_id INTEGER REFERENCES documents(document_id) ON DELETE CASCADE,
     edited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    title VARCHAR(255) NOT NULL,
     content JSONB NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -198,7 +197,7 @@ const checkEmail = function(req: Request, res: Response, next: NextFunction) {
 }
 
 const sanitizeDocument = function(req: Request, res: Response, next: NextFunction) {
-  req.body.title = validator.escape(req.body.title);
+  req.body.title = validator.escape(req.body.title.trim());
   try {
     if (typeof req.body.content === "string") {
       req.body.content = JSON.parse(req.body.content);
@@ -206,6 +205,22 @@ const sanitizeDocument = function(req: Request, res: Response, next: NextFunctio
   } catch {
     return res.status(400).end("Invalid content format");
   }
+  next();
+}
+
+const sanitizeContent = function(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (typeof req.body.content === "string") {
+      req.body.content = JSON.parse(req.body.content);
+    }
+  } catch {
+    return res.status(400).end("Invalid content format");
+  }
+  next();
+}
+
+const sanitizeTitle = function(req: Request, res: Response, next: NextFunction) {
+  req.body.title = validator.escape(req.body.title.trim());
   next();
 }
 
@@ -334,6 +349,7 @@ app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCre
     `, [docId], (err, sharePermsIdRows) => {
       if (err) return res.status(500).end(err);
       // grab all ids of people currently shared to the doc that can edit and check user that's trying to grant other user is one of them
+      if (sharePermsIdRows.rows.length === 0) return res.status(401).end("Invalid session");
       const sharePermsIds = sharePermsIdRows.rows.map(row => row.id);
       pool.query(`
         SELECT owner_id
@@ -400,34 +416,32 @@ app.post("/api/documents/:documentId/versions/:versionId", isAuthenticated, func
           if (userId !== ownerId) return res.status(403).end("You don't have permission to restore this version");
           // save current version of the document and then restore the specififed version
           pool.query(`
-            SELECT title, content
+            SELECT content
             FROM document_versions
             WHERE version_id = $1
             `, [versionId], (err, versionRow) => {
               if (err) return res.status(500).end(err);
               if (versionRow.rows.length === 0) return res.status(400).end("Version not found");
-              const version_title = versionRow.rows[0].title;
               const version_content = versionRow.rows[0].content;
               pool.query(`
-                SELECT title, content
+                SELECT content
                 FROM documents
                 WHERE document_id = $1
                 `, [docId], (err, currentDocumentRow) => {
                   if (err) return res.status(500).end(err);
                   if (currentDocumentRow.rows.length === 0) return res.status(400).end("Document not found");
-                  const curr_title = currentDocumentRow.rows[0].title;
                   const curr_content = currentDocumentRow.rows[0].content;
                   pool.query(`
-                    INSERT INTO document_versions(document_id, edited_by, title, content)
-                    VALUES ($1, $2, $3, $4)
-                    `, [docId, userId, curr_title, curr_content], (err) => {
+                    INSERT INTO document_versions(document_id, edited_by, content)
+                    VALUES ($1, $2, $3)
+                    `, [docId, userId, curr_content], (err) => {
                       if (err) return res.status(500).end(err);
                       pool.query(`
                         UPDATE documents
-                        SET title = $1, content = $2, last_modified = CURRENT_TIMESTAMP
-                        WHERE document_id = $3
+                        SET content = $1, last_modified = CURRENT_TIMESTAMP
+                        WHERE document_id = $2
                         RETURNING *
-                        `, [version_title, version_content, docId], (err, updatedDoc) => {
+                        `, [version_content, docId], (err, updatedDoc) => {
                           if (err) return res.status(500).end(err);
                           res.json({
                             document: updatedDoc.rows[0]
@@ -537,9 +551,10 @@ app.get("/api/documents/:documentId/versions/", isAuthenticated, function(req: R
             WHERE document_id = $1
             `, [docId], (err, totalRowsRow) => {
               if (err) return res.status(500).end(err);
+              if (totalRowsRow.rows.length === 0) return res.status(401).end("Invalid session");
               const totalVersions = parseInt(totalRowsRow.rows[0].count);
               pool.query(`
-                SELECT version_id, edited_by, title, created_at
+                SELECT version_id, edited_by, created_at
                 FROM document_versions
                 WHERE document_id = $1
                 ORDER BY created_at DESC
@@ -580,10 +595,9 @@ app.get("/api/documents/:documentId/versions/:versionId", isAuthenticated, funct
 });
 
 // UPDATE
-// update document (if person has edit access)
-app.patch("/api/documents/:documentId/", isAuthenticated, sanitizeDocument, function(req: Request, res: Response, next: NextFunction) {
-  if (!req.body.title || !req.body.content) return res.status(400).end("Missing title or content");
-  const title = req.body.title;
+// update document content (if person has edit access)
+app.patch("/api/documents/:documentId/data/content/", isAuthenticated, sanitizeContent, function(req: Request, res: Response, next: NextFunction) {
+  if (!req.body.content) return res.status(400).end("Missing title or content");
   const content = req.body.content;
   const docId = req.params.documentId;
   pool.query(`
@@ -595,7 +609,7 @@ app.patch("/api/documents/:documentId/", isAuthenticated, sanitizeDocument, func
       if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
       const userId = userIdRow.rows[0].id;
       pool.query(`
-        SELECT d.document_id, d.title, d.content
+        SELECT d.document_id, d.content
         FROM documents d
         LEFT JOIN shared_documents s ON d.document_id = s.document_id
         WHERE d.document_id = $1 AND (d.owner_id = $2 OR (s.user_id = $2 AND s.permission = 'edit'))
@@ -605,21 +619,58 @@ app.patch("/api/documents/:documentId/", isAuthenticated, sanitizeDocument, func
           const oldDoc = docResult.rows[0];
           // save old version for version history
           pool.query(`
-            INSERT INTO document_versions(document_id, edited_by, title, content)
-            VALUES ($1, $2, $3, $4)
-            `, [docId, userId, oldDoc.title, oldDoc.content], (err) => {
+            INSERT INTO document_versions(document_id, edited_by, content)
+            VALUES ($1, $2, $3)
+            `, [docId, userId, oldDoc.content], (err) => {
               if (err) return res.status(500).end(err);
               pool.query(`
                 UPDATE documents
-                SET content = $1, title = $2, last_modified = CURRENT_TIMESTAMP
-                WHERE document_id = $3
+                SET content = $1, last_modified = CURRENT_TIMESTAMP
+                WHERE document_id = $2
                 RETURNING *
-                `, [content, title, docId], (err, document) => {
+                `, [content, docId], (err, document) => {
                   if (err) return res.status(500).end(err);
                   res.json({
                     document: document.rows[0]
                   });
                 });
+            });
+        });
+    });
+});
+
+// update document title (if person has edit access)
+app.patch("/api/documents/:documentId/data/title/", isAuthenticated, sanitizeTitle, function(req: Request, res: Response, next: NextFunction) {
+  if (!req.body.title) return res.status(400).end("Missing title or content");
+  const title = req.body.title;
+  const docId = req.params.documentId;
+  pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
+      if (err) return res.status(500).end(err);
+      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      pool.query(`
+        SELECT 1
+        FROM documents d
+        LEFT JOIN shared_documents s ON d.document_id = s.document_id
+        WHERE d.document_id = $1 AND (d.owner_id = $2 OR (s.user_id = $2 AND s.permission = 'edit'))
+        `, [docId, userId], (err, docResult) => {
+          if (err) return res.status(500).end(err);
+          if (docResult.rows.length === 0) return res.status(403).end("You don't have permission to edit this document");
+          // update title
+          pool.query(`
+            UPDATE documents
+            SET title = $1, last_modified = CURRENT_TIMESTAMP
+            WHERE document_id = $2
+            RETURNING title
+            `, [title, docId], (err, updateRow) => {
+              if (err) return res.status(500).end(err);
+              res.json({
+                new_title: updateRow.rows[0].title
+              })
             });
         });
     });
