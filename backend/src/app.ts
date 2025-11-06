@@ -134,11 +134,28 @@ passport.use(new GoogleStrategy({
     const name = profile.displayName;
     const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
     // check if user is in db
-    pool.query("SELECT * FROM users WHERE google_id = $1", [googleId], (err, result) => {
+    pool.query("SELECT * FROM users WHERE google_id = $1 OR email = $2", [googleId, email], (err, result) => {
       if (err) return cb(err);
       // existing user
-      if (result.rows.length > 0) return cb(null, result.rows[0]);
-      // new user
+      if (result.rows.length > 0) {
+        const existingUser = result.rows[0];
+        // existing local user with email but now is signing in with google first time (link account)
+        if (!existingUser.google_id) {
+          pool.query(`
+            UPDATE users
+            SET google_id = $1
+            WHERE email = $2
+            RETURNING *
+            `, [googleId, email], (err, updated) => {
+              if (err) return cb(err);
+              return cb(null, updated.rows[0]);
+            });
+        } else {
+          // exisitng google user
+          return cb(null, existingUser);
+        }
+      }
+      // new user completly (no local auth)
       pool.query("INSERT INTO users(name, email, google_id) VALUES ($1, $2, $3) RETURNING *", [name, email, googleId], (err, dbResult) => {
         if (err) return cb(err);
         return cb(null, dbResult.rows[0]);
