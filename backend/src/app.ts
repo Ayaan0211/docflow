@@ -455,12 +455,32 @@ app.post("/api/documents/:documentId/versions/:versionId", isAuthenticated, func
 });
 
 // READ
-app.get("/api/session/", function(req: Request, res: Response, next: NextFunction) {
-  res.json({
-    isLoggedIn: req.email ? true : false,
-    username: req.email
-  })
+app.get("/api/session/", function (req: Request, res: Response, next: NextFunction) {
+  if (req.email) {
+    pool.query(
+      "SELECT name FROM users WHERE email = $1",
+      [req.email],
+      (err, nameRow) => {
+        if (err) return res.status(500).end(err);
+        if (nameRow.rows.length === 0) return res.status(401).end("Invalid session");
+
+        const username = nameRow.rows[0].name;
+        res.json({
+          isLoggedIn: true,
+          email: req.email,
+          username,
+        });
+      }
+    );
+  } else {
+    res.json({
+      isLoggedIn: false,
+      email: null,
+      username: null,
+    });
+  }
 });
+
 
 // get documents paginated
 app.get("/api/user/documents/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
