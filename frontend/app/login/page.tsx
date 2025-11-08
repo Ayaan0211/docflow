@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { api } from '../api';
@@ -7,6 +7,10 @@ import './style/globals.css';
 import GoogleLogo from './style/google.png';
 
 export default function AuthPage() {
+  useEffect(() => {
+    document.title = 'DocFlow - Login/Sign Up';
+  }, []);
+
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState(''); // << added here
   const router = useRouter();
@@ -56,7 +60,7 @@ export default function AuthPage() {
       <div id="auth-card">
         <div className="toggle-header">
           <div className={`slider ${isLogin ? 'left' : 'right'}`} />
-          <button className={`toggle-btn ${isLogin ? 'active' : ''}`} onClick={() => setIsLogin(true)}>Login</button>
+          <button className={`toggle-btn ${isLogin ? 'active' : ''}`} onClick={() => setIsLogin(true)}>Log In</button>
           <button className={`toggle-btn ${!isLogin ? 'active' : ''}`} onClick={() => setIsLogin(false)}>Sign Up</button>
         </div>
 
@@ -97,7 +101,7 @@ export default function AuthPage() {
           <button type="submit">{isLogin ? 'Log In' : 'Create Account'}</button>
         </form>
 
-        {!isLogin && (
+        {isLogin && (
           <button id="google-auth" onClick={handleGoogleAuth}>
             <Image src={GoogleLogo} alt="Google logo" width={20} height={20} />
             Continue with Google
