@@ -341,22 +341,24 @@ app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCre
   const permission = req.body.permission;
   const docId = req.params.documentId;
   if (!["view", "edit"].includes(permission)) return res.status(400).end("Invalid type of permission");
+
   pool.query(`
-    SELECT DISTINCT id
+    SELECT owner_id
     FROM documents
-    NATURAL JOIN shared_documents
-    WHERE document_id = $1 AND permission = 'edit'
-    `, [docId], (err, sharePermsIdRows) => {
+    WHERE document_id = $1
+    `, [docId], (err, ownerIdRow) => {
       if (err) return res.status(500).end(err);
-      // grab all ids of people currently shared to the doc that can edit and check user that's trying to grant other user is one of them
-      if (sharePermsIdRows.rows.length === 0) return res.status(401).end("Invalid session");
-      const sharePermsIds = sharePermsIdRows.rows.map(row => row.id);
+      if (ownerIdRow.rows.length === 0) return res.status(404).end("Document not found");
+      const owner_id = ownerIdRow.rows[0].owner_id;
       pool.query(`
-        SELECT owner_id
+        SELECT DISTINCT id
         FROM documents
-        WHERE document_id = $1
-        `, [docId], (err, ownerIdRow) => {
+        NATURAL JOIN shared_documents
+        WHERE document_id = $1 AND permission = 'edit'
+        `, [docId], (err, sharePermsIdRows) => {
           if (err) return res.status(500).end(err);
+          // grab all ids of people currently shared to the doc that can edit and check user that's trying to grant other user is one of them
+          const sharePermsIds = sharePermsIdRows.rows.map(row => row.id);
           sharePermsIds.push(ownerIdRow.rows[0].owner_id);
           pool.query(`
             SELECT id
