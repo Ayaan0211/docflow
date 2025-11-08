@@ -86,6 +86,37 @@ button:hover {
   transform: translateY(-5px);
 }
 
+.modal-card {
+  background: var(--card-bg);
+  color: var(--text-dark);
+  border: 1px solid var(--border-light);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.delete-button {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.5rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.more-options-button {
+  background-color: #6b7280;
+  color: white;
+  border: none;
+  padding: 0.25rem 0.25rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
 h1, h2 {
   color: var(--text-dark);
 }
