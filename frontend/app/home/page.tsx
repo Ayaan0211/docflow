@@ -270,7 +270,11 @@ export default function Home() {
           {documents.map((doc) => (
             <div
               key={doc.document_id}
-              className="card w-full max-w-100 h-50 relative"
+              className="card w-full max-w-100 h-50 relative cursor-pointer"
+              onClick={() =>
+                router.push(`/editor/${doc.document_id.toString()}`)
+                // router.push(`/editorTemp/`)
+              }
             >
               <h2 className="text-lg font-semibold text-center pt-4 pb-2">
                 {doc.title}

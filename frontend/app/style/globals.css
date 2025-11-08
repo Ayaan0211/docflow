@@ -218,3 +218,10 @@ button:hover {
 .link-btn:hover {
   color: var(--blue-hover);
 }
+
+
+.ql-editor {
+  font-weight: normal !important;
+  background-color: white !important;
+}
+

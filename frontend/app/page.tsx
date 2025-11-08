@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "./api";
+import "quill/dist/quill.snow.css";
 
 export default function Root() {
   const router = useRouter();
