@@ -91,7 +91,7 @@ export const documents = {
     apiFetch<DocumentsResponse>(`/api/user/documents/?page=${page}&maxDocuments=${maxDocuments}`),
 
   getById: (documentId: string | number) =>
-    apiFetch<{ document: Document }>(`/api/documents/${documentId}/`),
+    apiFetch<{ document: Document, canEdit: boolean }>(`/api/documents/${documentId}/`),
 
   updateContent: (documentId: string | number, content: any) =>
     apiFetch<{ document: Document }>(`/api/documents/${documentId}/data/content/`, {
@@ -138,4 +138,18 @@ export const versions = {
     }),
 };
 
-export const api = { auth, documents, versions };
+export const rtc = {
+  join: (documentId: string | number) =>
+    apiFetch<{ offer: string }>(`/api/documents/${documentId}/content/join/`),
+
+  answer: (documentId: string | number, answer: string) =>
+    apiFetch<{ ok: boolean }>(`/api/documents/${documentId}/content/answer/`, {
+      method: 'POST',
+      body: JSON.stringify({ answer }),
+    }),
+
+  leave: (documentId: string | number) =>
+    apiFetch<{ left: boolean }>(`/api/documents/${documentId}/content/leave/`),
+};
+
+export const api = { auth, documents, versions, rtc };

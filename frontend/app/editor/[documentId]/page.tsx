@@ -1,9 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { api } from "../../api";
+import { api, rtc } from "../../api";
 import "quill/dist/quill.snow.css";
 import "./style/globals.css";
+import { DocRTC } from "./rtcClient";
+
+const rtcRef = useRef<DocRTC | null>(null);
 
 export default function Editor() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,6 +37,17 @@ export default function Editor() {
           });
         }
         loadDocument();
+
+        // establish rtc connection
+        rtcRef.current = new DocRTC(Number(documentId), (delta: any) => {
+          quillRef.current?.updateContents(delta); // fixed spelling
+        });
+        rtcRef.current.connect();
+
+        // listen for local deltas and send them to server
+        quillRef.current.on("text-change", (delta: any, oldDelta: any, source: string) => {
+          if (source === "user") rtcRef.current?.sendDelta(delta);
+        });
       });
     }
     return () => {
@@ -44,11 +58,25 @@ export default function Editor() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleUnload = () => rtcRef.current?.leave();
+    window.addEventListener(`beforeunload`, handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      rtcRef.current?.leave();
+    };
+  }, []);
+
   const loadDocument = async () => {
     try {
       const response = await api.documents.getById(documentId);
       if (response.document.content && quillRef.current) {
         quillRef.current.setContents(response.document.content);
+      }
+      // disable editor if only view perms
+      if (!response.canEdit && quillRef.current) {
+        quillRef.current.disable();
+        document.querySelector(".ql-toolbar")?.remove();
       }
     } catch (error) {
       console.error("Error loading document:", error);
@@ -68,7 +96,7 @@ export default function Editor() {
         console.log("Error Saving", error);
     }
     finally {
-        setIsSaving(true);
+        setIsSaving(false);
     }
   }
 

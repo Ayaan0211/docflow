@@ -6,17 +6,18 @@ import { compare, genSalt, hash } from "bcrypt";
 import cors from "cors";
 import { Pool } from "pg";
 import validator from "validator";
-import passport from "passport";
+import passport, { use } from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Request, Response, NextFunction } from "express";
 import { Profile } from "passport-google-oauth20";
 import { VerifyCallback } from "passport-oauth2";
+import * as WebRTCManager from './webRTCManager';
 
 const PORT = 8080;
 const app = express();
 const saltRounds = 10;
 
-const pool = new Pool({
+export const pool = new Pool({
     host: process.env.DB_HOST,
     port: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
     user: process.env.DB_USER,
@@ -230,6 +231,14 @@ const sanitizeSharingCredentials = function(req: Request, res: Response, next: N
   next();
 }
 
+const sanitizeAnswer = function (req: Request, res: Response, next: NextFunction) {
+  if (typeof req.body.answer !== "string") {
+    return res.status(400).end("Invalid SDP format");
+  }
+  req.body.answer = req.body.answer.trim();
+  next();
+}
+
 // sign up local auth
 app.post("/api/signup/", checkCredentials, function(req: Request, res: Response, next: NextFunction) {
   // extract data from HTTP request
@@ -339,7 +348,7 @@ app.post("/api/user/documents/", isAuthenticated, sanitizeDocument, function(req
 app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCredentials, function(req: Request, res: Response, next: NextFunction) {
   const otherEmail = req.body.email;
   const permission = req.body.permission;
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   if (!["view", "edit"].includes(permission)) return res.status(400).end("Invalid type of permission");
 
   pool.query(`
@@ -359,7 +368,7 @@ app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCre
           if (err) return res.status(500).end(err);
           // grab all ids of people currently shared to the doc that can edit and check user that's trying to grant other user is one of them
           const sharePermsIds = sharePermsIdRows.rows.map(row => row.id);
-          sharePermsIds.push(ownerIdRow.rows[0].owner_id);
+          sharePermsIds.push(owner_id);
           pool.query(`
             SELECT id
             FROM users
@@ -397,7 +406,7 @@ app.post("/api/user/documents/:documentId/", isAuthenticated, sanitizeSharingCre
 
 // restore a specifc version (only owners can restore a version)
 app.post("/api/documents/:documentId/versions/:versionId", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   const versionId = req.params.versionId;
   pool.query(`
     SELECT id
@@ -526,27 +535,36 @@ app.get("/api/user/documents/", isAuthenticated, function(req: Request, res: Res
 
 // get single document
 app.get("/api/documents/:documentId/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   pool.query(`
-    SELECT *
-    FROM documents
-    WHERE document_id = $1
-    `, [docId], (err, document) => {
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
       if (err) return res.status(500).end(err);
-      if (document.rows.length === 0) {
-        return res
-        .status(404)
-        .end("Document " + docId + " does not exist.");
-      }
-      res.json({
-        document: document.rows[0]
-      });
+      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      pool.query(`
+        SELECT d.*, s.permission
+        FROM documents d
+        LEFT JOIN shared_documents s ON d.document_id = s.document_id AND s.user_id = $2
+        WHERE d.document_id = $1 AND (d.owner_id = $2 OR s.user_id = $2)
+        `, [docId, userId], (err, result) => {
+          if (err) return res.status(500).end(err);
+          if (result.rows.length === 0) return res.status(403).end("You do not have access to this document");
+          const doc = result.rows[0];
+          const canEdit = doc.owner_id === userId || doc.permission === 'edit';
+          res.json({
+            document: doc,
+            canEdit
+          })
+        });
     });
 });
 
 // get version history paginated, only owner should see document history
 app.get("/api/documents/:documentId/versions/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   const page = parseInt(req.query.page as string);
   const maxVersions = parseInt(req.query.maxVersions as string);
   const offset = (page - 1) * maxVersions;
@@ -597,22 +615,41 @@ app.get("/api/documents/:documentId/versions/", isAuthenticated, function(req: R
 
 // get single version history
 app.get("/api/documents/:documentId/versions/:versionId", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   const versionId = req.params.versionId;
-  return pool.query(`
-    SELECT *
-    FROM document_versions
-    WHERE version_id = $1
-    `, [versionId], (err, document) => {
+  pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
       if (err) return res.status(500).end(err);
-      if (document.rows.length === 0) {
-        return res
-        .status(404)
-        .end("Document with ID " + docId + " with version ID" + versionId +"does not exist.");
-      }
-      res.json({
-        document: document.rows[0]
-      });
+      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      pool.query(`
+        SELECT owner_id
+        FROM documents
+        WHERE document_id = $1
+        `, [docId], (err, ownerIdRow) => {
+          if (err) return res.status(500).end(err);
+          if (ownerIdRow.rows.length === 0) return res.status(404).end("Document not found");
+          const ownerId = ownerIdRow.rows[0].owner_id;
+          if (userId !== ownerId) return res.status(403).end("You don't have permission to view this version");
+          pool.query(`
+            SELECT *
+            FROM document_versions
+            WHERE version_id = $1 AND document_id = $2
+            `, [versionId, docId], (err, document) => {
+              if (err) return res.status(500).end(err);
+              if (document.rows.length === 0) {
+                return res
+                .status(404)
+                .end("Document with ID " + docId + " with version ID" + versionId +"does not exist.");
+              }
+              res.json({
+                document: document.rows[0],
+              });
+            });
+        });
     });
 });
 
@@ -621,7 +658,7 @@ app.get("/api/documents/:documentId/versions/:versionId", isAuthenticated, funct
 app.patch("/api/documents/:documentId/data/content/", isAuthenticated, sanitizeContent, function(req: Request, res: Response, next: NextFunction) {
   if (!req.body.content) return res.status(400).end("Missing title or content");
   const content = req.body.content;
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   pool.query(`
     SELECT id
     FROM users
@@ -665,7 +702,7 @@ app.patch("/api/documents/:documentId/data/content/", isAuthenticated, sanitizeC
 app.patch("/api/documents/:documentId/data/title/", isAuthenticated, sanitizeTitle, function(req: Request, res: Response, next: NextFunction) {
   if (!req.body.title) return res.status(400).end("Missing title or content");
   const title = req.body.title;
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   pool.query(`
     SELECT id
     FROM users
@@ -701,7 +738,7 @@ app.patch("/api/documents/:documentId/data/title/", isAuthenticated, sanitizeTit
 // DELETE
 // delete document (only owners can delete)
 app.delete("/api/documents/:documentId/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   pool.query(`
     SELECT id
     FROM users
@@ -736,7 +773,7 @@ app.delete("/api/documents/:documentId/", isAuthenticated, function(req: Request
 // delete other user from document (sharing)
 app.delete("/api/documents/:documentId/users/", isAuthenticated, checkEmail, function(req: Request, res: Response, next: NextFunction) {
   if (!('email' in req.body)) return res.status(400).end('email is missing');
-  const docId = req.params.documentId;
+  const docId = parseInt(req.params.documentId);
   pool.query(`
     SELECT id
     FROM users
@@ -777,6 +814,94 @@ app.delete("/api/documents/:documentId/users/", isAuthenticated, checkEmail, fun
 });
 
 // RTC
+// join document
+app.get("/api/documents/:documentId/content/join/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
+  const docId = parseInt(req.params.documentId);
+  pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
+      if (err) return res.status(500).end(err);
+      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      // Check ownership
+      pool.query(`
+        SELECT 1
+        FROM documents d
+        LEFT JOIN shared_documents s ON d.document_id = s.document_id AND s.user_id = $2
+        WHERE d.document_id = $1 AND (d.owner_id = $2 OR s.permission = 'edit')
+        `, [docId, userId], (err, permsRow) => {
+          if (err) return res.status(500).end(err);
+          if (permsRow.rows.length === 0) return res.status(403).end("You do not have permission to edit this document");
+          WebRTCManager.joinRoom(docId, userId, function(offer) {
+            if (!offer) return res.status(500).end("Failed to create offer");
+            res.json({
+              offer
+            });
+          });
+        }); 
+    });
+});
+
+// sdp
+app.post("/api/documents/:documentId/content/answer/", isAuthenticated, sanitizeAnswer, function(req: Request, res: Response, next: NextFunction) {
+  const docId = parseInt(req.params.documentId);
+  const sdp = req.body.answer;
+  pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
+      if (err) return res.status(500).end(err);
+      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      // check ownership
+      pool.query(`
+        SELECT 1
+        FROM documents d
+        LEFT JOIN shared_documents s ON d.document_id = s.document_id AND s.user_id = $2
+        WHERE d.document_id = $1 AND (d.owner_id = $2 OR s.permission = 'edit')
+        `, [docId, userId], (err, permsRow) => {
+          if (err) return res.status(500).end(err);
+          if (permsRow.rows.length === 0) return res.status(403).end("You do not have permission to edit this document");
+          const room = WebRTCManager.rooms[docId];
+          const user = room.peers.find(p => p.userId === userId);
+          if (!user) return res.status(403).end("User not found in room");
+          user.peer.setRemoteDescription({ type: 'answer', sdp })
+            .then(() => res.json({ ok: true }))
+            .catch((err: unknown) => res.status(500).end(String(err)));
+        }); 
+    });
+});
+
+// leave document
+app.get("/api/documents/:documentId/content/leave/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
+  const docId = parseInt(req.params.documentId);
+  pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
+      if (err) return res.status(500).end(err);
+      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      // check ownership
+      pool.query(`
+        SELECT 1
+        FROM documents d
+        LEFT JOIN shared_documents s ON d.document_id = s.document_id AND s.user_id = $2
+        WHERE d.document_id = $1 AND (d.owner_id = $2 OR s.permission = 'edit')
+        `, [docId, userId], (err, permsRow) => {
+          if (err) return res.status(500).end(err);
+          if (permsRow.rows.length === 0) return res.status(403).end("You do not have permission to edit this document");
+          WebRTCManager.leaveRoom(docId, userId);
+          res.json({
+            left: true
+          });
+        });
+    });
+})
 
 export const server = createServer(app);
 
