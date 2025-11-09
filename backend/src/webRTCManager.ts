@@ -39,16 +39,21 @@ export function joinRoom(documentId: number, userId: number, cb: (offer: string)
 }
 
 function createPeer(documentId: number, userId: number, cb: (offer: string) => void) {
-    const peer = new RTCPeerConnection();
+    const peer = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
     const channel = peer.createDataChannel('delta-sync');
 
-    peer.createOffer()
-        .then((offer: any) => {
-            peer.setLocalDescription(offer);
+    peer.onicecandidate = (event: any) => {
+        if (!event.candidate) {
             rooms[documentId].peers.push({ userId, peer, dataChannel: channel})
-            cb(offer.sdp);
+            cb(peer.localDescription.sdp);
         }
-    );
+    }
+
+    peer.createOffer()
+        .then((offer: any) => peer.setLocalDescription(offer))
+        .catch((err: unknown) => console.error("Error creating or setting local description:", String(err)));
     
     channel.onmessage = (event: any) => {
         const delta = new Delta(JSON.parse(event.data));
@@ -82,6 +87,10 @@ export function leaveRoom(documentId: number, userId: number) {
             `, [documentId], (err, contentRow) => {
                 if (err || contentRow.rows.length === 0) {
                     console.error("Error fetching current document:", err);
+                    for (const p of room.peers) {
+                        p.dataChannel?.close();
+                        p.peer?.close();
+                    }
                     delete rooms[documentId];
                     return;
                 }
@@ -93,6 +102,10 @@ export function leaveRoom(documentId: number, userId: number) {
                     `, [documentId, userId, content], (err, contentRow) => {
                         if (err) {
                             console.error("Error saving version:", err);
+                            for (const p of room.peers) {
+                                p.dataChannel?.close();
+                                p.peer?.close();
+                            }
                             delete rooms[documentId];
                             return;
                         }
@@ -102,14 +115,19 @@ export function leaveRoom(documentId: number, userId: number) {
                             SET content = $1, last_modified = CURRENT_TIMESTAMP
                             WHERE document_id = $2
                             `, [finalContent, documentId], (err) => {
-                                if (err) {
-                                    console.error("Error updating document:", err);
-                                    delete rooms[documentId]
+                                if (err) console.error("Error updating document:", err)
+                                for (const p of room.peers) {
+                                    p.dataChannel?.close();
+                                    p.peer?.close();
                                 }
                                 delete rooms[documentId]
                             });
                     });
                 } else {
+                    for (const p of room.peers) {
+                        p.dataChannel?.close();
+                        p.peer?.close();
+                    }
                     delete rooms[documentId]
                 }
             });
