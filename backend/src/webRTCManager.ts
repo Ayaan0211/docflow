@@ -1,6 +1,10 @@
-import PeerConnection from 'webrtc-datachannel';
+import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } from "@koush/wrtc";
 import Delta from 'quill-delta';
 import { pool } from './app';
+
+(global as any).RTCPeerConnection = RTCPeerConnection;
+(global as any).RTCSessionDescription = RTCSessionDescription;
+(global as any).RTCIceCandidate = RTCIceCandidate;
 
 type UserSession = {
     userId: number;
@@ -35,12 +39,12 @@ export function joinRoom(documentId: number, userId: number, cb: (offer: string)
 }
 
 function createPeer(documentId: number, userId: number, cb: (offer: string) => void) {
-    const peer = new PeerConnection();
-    const channel = peer.createChannel('delta-sync');
+    const peer = new RTCPeerConnection();
+    const channel = peer.createDataChannel('delta-sync');
 
     peer.createOffer()
         .then((offer: any) => {
-            peer.setOffer(offer);
+            peer.setLocalDescription(offer);
             rooms[documentId].peers.push({ userId, peer, dataChannel: channel})
             cb(offer.sdp);
         }
