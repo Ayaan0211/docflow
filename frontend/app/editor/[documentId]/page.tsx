@@ -6,9 +6,8 @@ import "quill/dist/quill.snow.css";
 import "./style/globals.css";
 import { DocRTC } from "./rtcClient";
 
-const rtcRef = useRef<DocRTC | null>(null);
-
 export default function Editor() {
+  const rtcRef = useRef<DocRTC | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const quillRef = useRef<any>(null);
@@ -39,11 +38,12 @@ export default function Editor() {
         loadDocument();
 
         // establish rtc connection
-        rtcRef.current = new DocRTC(Number(documentId), (delta: any) => {
-          quillRef.current?.updateContents(delta); // fixed spelling
-        });
-        rtcRef.current.connect();
-
+        if (!rtcRef.current) {
+          rtcRef.current = new DocRTC(Number(documentId), (delta: any) => {
+            quillRef.current?.updateContents(delta);
+          });
+          rtcRef.current.connect();
+        }
         // listen for local deltas and send them to server
         quillRef.current.on("text-change", (delta: any, oldDelta: any, source: string) => {
           if (source === "user") rtcRef.current?.sendDelta(delta);
