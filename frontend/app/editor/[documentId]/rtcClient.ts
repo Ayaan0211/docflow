@@ -20,9 +20,18 @@ export class DocRTC {
         return api.rtc.join(this.documentId)
             .then((offer) => {
                 this.peerId = offer.peerId;
-                this.pc = new RTCPeerConnection({
-                    iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
-                });
+                const iceServers =
+                    process.env.NODE_ENV === "production"
+                        ? [
+                            { urls: "stun:stun.l.google.com:19302" },
+                            {
+                            urls: process.env.NEXT_PUBLIC_TURN_URL!,
+                            username: process.env.NEXT_PUBLIC_TURN_USERNAME!,
+                            credential: process.env.NEXT_PUBLIC_TURN_PASSWORD!,
+                            },
+                        ]
+                        : [{ urls: "stun:stun.l.google.com:19302" }];
+                this.pc = new RTCPeerConnection({ iceServers });
                 this.pc.ondatachannel = (event) => {
                     const channel = event.channel;
                     if (channel.label !== 'delta-sync') return;
