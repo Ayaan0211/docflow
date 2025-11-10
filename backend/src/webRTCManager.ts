@@ -135,7 +135,6 @@ function createPeer(documentId: number, userId: number, cb: (offer: any) => void
         });
     
     channel.onopen = () => {
-        console.log(`✅ Data channel open for user ${userId} on doc ${documentId}`);
         const room = rooms[documentId];
         if (!room) return;
         // send a snapshot with the authoritative state
@@ -143,7 +142,6 @@ function createPeer(documentId: number, userId: number, cb: (offer: any) => void
             type: 'snapshot',
             content: room.docState
         }));
-        console.log(`📤 Sending snapshot to user ${userId} for doc ${documentId}`);
     };
 
     channel.onmessage = (event: any) => {
