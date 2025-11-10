@@ -26,11 +26,18 @@ export function joinRoom(documentId: number, userId: number, cb: (offer: string)
             SELECT content from documents WHERE document_id = $1
             `, [documentId], (err, contentRow) => {
                 if (err || contentRow.rows.length === 0) return cb('');
-                rooms[documentId] = {
-                    documentId,
-                    peers: [],
-                    docState: new Delta(contentRow.rows[0].content)
-                };
+                try {
+                    const raw = contentRow.rows[0].content;
+                    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+                    rooms[documentId] = {
+                        documentId,
+                        peers: [],
+                        docState: new Delta(parsed)
+                    };
+                } catch (parseError) {
+                    console.error("Error initializing Delta for document", documentId, parseError);
+                    return cb('');
+                }
                 createPeer(documentId, userId, cb);
             });
     } else {
@@ -45,11 +52,15 @@ function createPeer(documentId: number, userId: number, cb: (offer: string) => v
     const channel = peer.createDataChannel('delta-sync');
 
     peer.onicecandidate = (event: any) => {
+        if (!exports.rooms[documentId]) {
+            exports.rooms[documentId] = { peers: [], docState: null, documentId };
+        }
         if (!event.candidate) {
-            rooms[documentId].peers.push({ userId, peer, dataChannel: channel})
+            // Final candidate (done gathering)
+            exports.rooms[documentId].peers.push({ userId, peer, dataChannel: channel });
             cb(peer.localDescription.sdp);
         }
-    }
+    };
 
     peer.createOffer()
         .then((offer: any) => peer.setLocalDescription(offer))
@@ -58,6 +69,7 @@ function createPeer(documentId: number, userId: number, cb: (offer: string) => v
     channel.onmessage = (event: any) => {
         const delta = new Delta(JSON.parse(event.data));
         const room = rooms[documentId];
+        if (!room?.docState) return;
         // merge into master doc state
         room.docState = room.docState.compose(delta);
         for (const p of room.peers) {
@@ -85,13 +97,16 @@ export function leaveRoom(documentId: number, userId: number) {
             FROM documents
             WHERE document_id = $1
             `, [documentId], (err, contentRow) => {
-                if (err || contentRow.rows.length === 0) {
-                    console.error("Error fetching current document:", err);
+                const cleanup = () => {
                     for (const p of room.peers) {
                         p.dataChannel?.close();
                         p.peer?.close();
                     }
                     delete rooms[documentId];
+                };
+                if (err || contentRow.rows.length === 0) {
+                    console.error("Error fetching current document:", err);
+                    cleanup();
                     return;
                 }
                 const content = contentRow.rows[0].content;
@@ -102,11 +117,7 @@ export function leaveRoom(documentId: number, userId: number) {
                     `, [documentId, userId, content], (err, contentRow) => {
                         if (err) {
                             console.error("Error saving version:", err);
-                            for (const p of room.peers) {
-                                p.dataChannel?.close();
-                                p.peer?.close();
-                            }
-                            delete rooms[documentId];
+                            cleanup();
                             return;
                         }
                         // put delta version as current version
@@ -116,19 +127,11 @@ export function leaveRoom(documentId: number, userId: number) {
                             WHERE document_id = $2
                             `, [finalContent, documentId], (err) => {
                                 if (err) console.error("Error updating document:", err)
-                                for (const p of room.peers) {
-                                    p.dataChannel?.close();
-                                    p.peer?.close();
-                                }
-                                delete rooms[documentId]
+                                cleanup();
                             });
                     });
                 } else {
-                    for (const p of room.peers) {
-                        p.dataChannel?.close();
-                        p.peer?.close();
-                    }
-                    delete rooms[documentId]
+                    cleanup();
                 }
             });
     }
