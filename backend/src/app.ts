@@ -508,8 +508,9 @@ app.get("/api/user/documents/", isAuthenticated, function(req: Request, res: Res
           if (err) return res.status(500).end(err);
           const totalDocuments = parseInt(totalDocumentsRow.rows[0].count);
           pool.query(`
-            SELECT DISTINCT d.document_id, d.owner_id, d.title, d.last_modified
+            SELECT DISTINCT d.document_id, d.owner_id, d.title, d.last_modified, u.name as owner_name
             FROM documents d
+            JOIN users u ON d.owner_id = u.id
             LEFT JOIN shared_documents s ON d.document_id = s.document_id
             WHERE d.owner_id = $1 OR s.user_id = $1
             ORDER BY last_modified DESC
