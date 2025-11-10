@@ -28,6 +28,7 @@ export class DocRTC {
                     if (channel.label !== 'delta-sync') return;
                     this.channel = channel;
                     channel.onmessage = (e) => {
+                        console.log("📨 Received message:", e.data);
                         try {
                             const msg = JSON.parse(e.data);
                             if (msg.type === 'snapshot') {
