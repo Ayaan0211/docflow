@@ -66,12 +66,21 @@ export function joinRoom(documentId: number, userId: number, cb: (offer: string)
 
 function createPeer(documentId: number, userId: number, cb: (offer: any) => void) {
     const peerId = randomUUID();
-    const peer = new RTCPeerConnection({
-        iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        // { urls: 'turn:turn.example.com', username: 'user', credential: 'pass' } // may need this in prod later
-        ]
-    });
+    const iceServers =
+        process.env.NODE_ENV === "prod"
+            ? [
+                { urls: "stun:stun.l.google.com:19302" },
+                {
+                urls: process.env.TURN_URL || "turn:turnserver:3478",
+                username: process.env.TURN_USERNAME,
+                credential: process.env.TURN_PASSWORD,
+                },
+            ]
+            : [
+                // local/dev mode — STUN only
+                { urls: "stun:stun.l.google.com:19302" },
+            ];
+    const peer = new RTCPeerConnection({ iceServers });
 
     const channel = peer.createDataChannel('delta-sync');
 

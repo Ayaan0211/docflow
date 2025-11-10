@@ -68,6 +68,33 @@ services:
       - db:/data/postgres
     networks:
       - proxy
+  
+  turnserver:
+    image: coturn/coturn
+    container_name: turnserver
+    restart: unless-stopped
+    environment:
+      - TURN_USERNAME=${TURN_USERNAME}
+      - TURN_PASSWORD=${TURN_PASSWORD}
+    command: >
+      turnserver
+      --no-cli
+      --no-tls
+      --no-dtls
+      --lt-cred-mech
+      --user=${TURN_USERNAME}:${TURN_PASSWORD}
+      --realm=amazingcloud.space
+      --fingerprint
+      --listening-port=3478
+      --min-port=49152
+      --max-port=49200
+      --log-file=stdout
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "49152-49200:49152-49200/udp"
+    networks:
+      - proxy
 
 networks:
   proxy:
