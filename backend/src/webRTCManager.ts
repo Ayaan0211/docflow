@@ -28,7 +28,20 @@ export function joinRoom(documentId: number, userId: number, cb: (offer: string)
                 if (err || contentRow.rows.length === 0) return cb('');
                 try {
                     const raw = contentRow.rows[0].content;
-                    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+                    let parsed: any;
+                    if (!raw) {
+                        parsed = { ops: [] };
+                    } else if (typeof raw === "string") {
+                        parsed = JSON.parse(raw);
+                    } else if (typeof raw === "object") {
+                        parsed = raw;
+                    } else {
+                        parsed = { ops: [] };
+                    }
+                    if (!parsed.ops || !Array.isArray(parsed.ops)) {
+                        console.warn(`Document ${documentId} had invalid ops, resetting`);
+                        parsed = { ops: [] };
+                    }
                     rooms[documentId] = {
                         documentId,
                         peers: [],
@@ -56,15 +69,18 @@ function createPeer(documentId: number, userId: number, cb: (offer: string) => v
             exports.rooms[documentId] = { peers: [], docState: null, documentId };
         }
         if (!event.candidate) {
-            // Final candidate (done gathering)
             exports.rooms[documentId].peers.push({ userId, peer, dataChannel: channel });
-            cb(peer.localDescription.sdp);
+            const sdp = peer.localDescription?.sdp ?? '';
+            cb(sdp);
         }
     };
 
     peer.createOffer()
         .then((offer: any) => peer.setLocalDescription(offer))
-        .catch((err: unknown) => console.error("Error creating or setting local description:", String(err)));
+        .catch((err: unknown) => {
+            console.error("Error creating or setting local description:", String(err));
+            cb('');
+        });
     
     channel.onmessage = (event: any) => {
         const delta = new Delta(JSON.parse(event.data));
