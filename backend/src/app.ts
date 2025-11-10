@@ -12,6 +12,7 @@ import { Request, Response, NextFunction } from "express";
 import { Profile } from "passport-google-oauth20";
 import { VerifyCallback } from "passport-oauth2";
 import * as WebRTCManager from './webRTCManager';
+import { RTCSessionDescription } from "@koush/wrtc";
 
 const PORT = 8080;
 const app = express();
@@ -118,12 +119,6 @@ app.use(session({
   }
 }));
 
-app.use(function (req: Request, res: Response, next: NextFunction) {
-  req.email = req.session.email ? req.session.email : null;
-  console.log("HTTP request", req.email, req.method, req.url, req.body);
-  next();
-});
-
 app.use(express.urlencoded({ extended: false }));
 
 passport.use(new GoogleStrategy({
@@ -167,6 +162,12 @@ passport.use(new GoogleStrategy({
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(passport.authenticate('session'));
+
+app.use(function (req: Request, res: Response, next: NextFunction) {
+  req.email = req.session.email ? req.session.email : null;
+  console.log("HTTP request", req.email, req.method, req.url, req.body);
+  next();
+});
 
 passport.serializeUser(function (user, cb) {
   cb(null, user.id);
@@ -228,14 +229,6 @@ const sanitizeTitle = function(req: Request, res: Response, next: NextFunction) 
 const sanitizeSharingCredentials = function(req: Request, res: Response, next: NextFunction) {
   if (!validator.isEmail(req.body.email)) return res.status(400).end("Invalid email format");
   req.body.permission = validator.escape(req.body.permission);
-  next();
-}
-
-const sanitizeAnswer = function (req: Request, res: Response, next: NextFunction) {
-  if (typeof req.body.answer !== "string") {
-    return res.status(400).end("Invalid SDP format");
-  }
-  req.body.answer = req.body.answer.trim();
   next();
 }
 
@@ -664,7 +657,7 @@ app.patch("/api/documents/:documentId/data/content/", isAuthenticated, sanitizeC
     FROM users
     WHERE email = $1
     `, [req.email], (err, userIdRow) => {
-      if (err) return res.status(500).end(err);
+      if (err) return res.status(500).json({ error: err.message });
       if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
       const userId = userIdRow.rows[0].id;
       pool.query(`
@@ -673,23 +666,23 @@ app.patch("/api/documents/:documentId/data/content/", isAuthenticated, sanitizeC
         LEFT JOIN shared_documents s ON d.document_id = s.document_id
         WHERE d.document_id = $1 AND (d.owner_id = $2 OR (s.user_id = $2 AND s.permission = 'edit'))
         `, [docId, userId], (err, docResult) => {
-          if (err) return res.status(500).end(err);
+          if (err) return res.status(500).json({ error: err.message });
           if (docResult.rows.length === 0) return res.status(403).end("You don't have permission to edit this document");
           const oldDoc = docResult.rows[0];
           // save old version for version history
           pool.query(`
             INSERT INTO document_versions(document_id, edited_by, content)
             VALUES ($1, $2, $3)
-            `, [docId, userId, oldDoc.content], (err) => {
-              if (err) return res.status(500).end(err);
+            `, [docId, userId, JSON.stringify(oldDoc.content)], (err) => {
+              if (err) return res.status(500).json({ error: err.message });
               pool.query(`
                 UPDATE documents
                 SET content = $1, last_modified = CURRENT_TIMESTAMP
                 WHERE document_id = $2
                 RETURNING *
-                `, [content, docId], (err, document) => {
-                  if (err) return res.status(500).end(err);
-                  res.json({
+                `, [JSON.stringify(content), docId], (err, document) => {
+                  if (err) return res.status(500).json({ error: err.message });
+                  return res.json({
                     document: document.rows[0]
                   });
                 });
@@ -815,7 +808,7 @@ app.delete("/api/documents/:documentId/users/", isAuthenticated, checkEmail, fun
 
 // RTC
 // join document
-app.get("/api/documents/:documentId/content/join/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
+app.get("/api/documents/:documentId/data/join/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
   const docId = parseInt(req.params.documentId);
   pool.query(`
     SELECT id
@@ -836,18 +829,19 @@ app.get("/api/documents/:documentId/content/join/", isAuthenticated, function(re
           if (permsRow.rows.length === 0) return res.status(403).end("You do not have permission to edit this document");
           WebRTCManager.joinRoom(docId, userId, function(offer) {
             if (!offer) return res.status(500).end("Failed to create offer");
-            res.json({
-              offer
-            });
+            res.json(offer);
           });
         }); 
     });
 });
 
 // sdp
-app.post("/api/documents/:documentId/content/answer/", isAuthenticated, sanitizeAnswer, function(req: Request, res: Response, next: NextFunction) {
+app.post("/api/documents/:documentId/data/answer/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
   const docId = parseInt(req.params.documentId);
-  const sdp = req.body.answer;
+  const desc = req.body;;
+  if (!desc || !desc.sdp) {
+    return res.status(400).json({ error: "Missing SDP data" });
+  }
   pool.query(`
     SELECT id
     FROM users
@@ -868,40 +862,12 @@ app.post("/api/documents/:documentId/content/answer/", isAuthenticated, sanitize
           const room = WebRTCManager.rooms[docId];
           const user = room.peers.find(p => p.userId === userId);
           if (!user) return res.status(403).end("User not found in room");
-          user.peer.setRemoteDescription({ type: 'answer', sdp })
+          user.peer.setRemoteDescription(new RTCSessionDescription(desc))
             .then(() => res.json({ ok: true }))
             .catch((err: unknown) => res.status(500).end(String(err)));
         }); 
     });
 });
-
-// leave document
-app.get("/api/documents/:documentId/content/leave/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
-  const docId = parseInt(req.params.documentId);
-  pool.query(`
-    SELECT id
-    FROM users
-    WHERE email = $1
-    `, [req.email], (err, userIdRow) => {
-      if (err) return res.status(500).end(err);
-      if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
-      const userId = userIdRow.rows[0].id;
-      // check ownership
-      pool.query(`
-        SELECT 1
-        FROM documents d
-        LEFT JOIN shared_documents s ON d.document_id = s.document_id AND s.user_id = $2
-        WHERE d.document_id = $1 AND (d.owner_id = $2 OR s.permission = 'edit')
-        `, [docId, userId], (err, permsRow) => {
-          if (err) return res.status(500).end(err);
-          if (permsRow.rows.length === 0) return res.status(403).end("You do not have permission to edit this document");
-          WebRTCManager.leaveRoom(docId, userId);
-          res.json({
-            left: true
-          });
-        });
-    });
-})
 
 export const server = createServer(app);
 

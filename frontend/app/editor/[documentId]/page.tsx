@@ -5,6 +5,7 @@ import { api, rtc } from "../../api";
 import "quill/dist/quill.snow.css";
 import "./style/globals.css";
 import { DocRTC } from "./rtcClient";
+import Delta from 'quill-delta';
 
 export default function Editor() {
   const rtcRef = useRef<DocRTC | null>(null);
@@ -15,6 +16,7 @@ export default function Editor() {
   const documentId = params.documentId as string;
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const canEditRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (
@@ -34,20 +36,69 @@ export default function Editor() {
               ],
             },
           });
+          quillRef.current.disable();
         }
-        loadDocument();
+        let applyingRemote = false;
+        let pending = new Delta();
+        let snapshotApplied = false;
+        let queuedDeltas: any[] = [];
+
+
+        function isEmpty(d: Delta) { return !d || !d.ops || d.ops.length === 0; }
+
+        function handleRemoteDelta(deltaObj: any) {
+          if (!snapshotApplied) {
+            queuedDeltas.push(deltaObj);
+            return;
+          }
+          if (!quillRef.current) return;
+          const remote = new Delta(deltaObj)
+          // trasform remote
+          const transformedRemote = isEmpty(pending) ? remote : remote.transform(pending, true);
+          applyingRemote = true;
+          quillRef.current.updateContents(transformedRemote, "api");
+          applyingRemote = false;
+          pending = isEmpty(pending) ? pending : pending.transform(transformedRemote, false);
+        }
 
         // establish rtc connection
         if (!rtcRef.current) {
-          rtcRef.current = new DocRTC(Number(documentId), (delta: any) => {
-            quillRef.current?.updateContents(delta);
+          rtcRef.current = new DocRTC(Number(documentId), (payload: any) => {
+            // Only apply incoming changes when not already in a local edit (with batch updates to make it smoother)
+            if (!quillRef.current) return;
+            if (payload && payload.snapshot) {
+              snapshotApplied = true
+              applyingRemote = true;
+              quillRef.current.setContents(payload.snapshot, "api");
+              applyingRemote = false;
+              pending = new Delta();
+              if (canEditRef.current) quillRef.current.enable();
+              for (const d of queuedDeltas) handleRemoteDelta(d);
+              queuedDeltas = [];
+              return;
+            }
+            handleRemoteDelta(payload);
           });
           rtcRef.current.connect();
+          // only load from api if RTC snapshot hasn't arrived after 2 seconds
+          setTimeout(() => {
+            if (quillRef.current && quillRef.current.getLength() <= 1) {
+              loadDocument();
+            }
+          }, 2000);
         }
         // listen for local deltas and send them to server
-        quillRef.current.on("text-change", (delta: any, oldDelta: any, source: string) => {
-          if (source === "user") rtcRef.current?.sendDelta(delta);
-        });
+        quillRef.current.on(
+          "text-change",
+          (delta: any, oldDelta: any, source: string) => {
+            if (!snapshotApplied) return;
+            if (source === "user" && !applyingRemote) {
+              const d = new Delta(delta);
+              pending = pending.compose(d);
+              rtcRef.current?.sendDelta(d);
+            }
+          }
+        );
       });
     }
     return () => {
@@ -55,15 +106,6 @@ export default function Editor() {
         quillRef.current.disable();
         quillRef.current = null;
       }
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleUnload = () => rtcRef.current?.leave();
-    window.addEventListener(`beforeunload`, handleUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleUnload);
-      rtcRef.current?.leave();
     };
   }, []);
 
@@ -75,9 +117,10 @@ export default function Editor() {
       }
       // disable editor if only view perms
       if (!response.canEdit && quillRef.current) {
-        quillRef.current.disable();
         document.querySelector(".ql-toolbar")?.remove();
       }
+      quillRef.current.disable();
+      canEditRef.current = response.canEdit;
     } catch (error) {
       console.error("Error loading document:", error);
     }

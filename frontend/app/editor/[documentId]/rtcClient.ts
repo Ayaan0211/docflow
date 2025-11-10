@@ -1,5 +1,4 @@
 "use client";
-import { off } from "process";
 import { api } from "../../api";
 
 type OnDeltaHandler = (delta: any) => void;
@@ -9,15 +8,18 @@ export class DocRTC {
     private channel: RTCDataChannel | null = null;
     private documentId: number;
     private onDelta?: OnDeltaHandler;
+    private peerId: string;
 
     constructor(documentId: number, onDelta?: OnDeltaHandler) {
         this.documentId = documentId;
         this.onDelta = onDelta;
+        this.peerId = crypto.randomUUID();
     }
 
     connect(): Promise<void> {
         return api.rtc.join(this.documentId)
-            .then(({ offer }) => {
+            .then((offer) => {
+                this.peerId = offer.peerId;
                 this.pc = new RTCPeerConnection({
                     iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
                 });
@@ -26,21 +28,32 @@ export class DocRTC {
                     if (channel.label !== 'delta-sync') return;
                     this.channel = channel;
                     channel.onmessage = (e) => {
-                        try  {
-                            const delta = JSON.parse(e.data);
-                            this.onDelta && this.onDelta(delta);
+                        try {
+                            const msg = JSON.parse(e.data);
+                            if (msg.type === 'snapshot') {
+                                this.onDelta && this.onDelta({ snapshot: msg.content })
+                                return;
+                            }
+                            if (msg.type === 'delta') {
+                                if (!msg.delta) return;
+                                if (msg.sender !== this.peerId) {
+                                    this.onDelta && this.onDelta(msg.delta);
+                                } else {
+                                    return;
+                                }
+                            }
                         } catch (err) {
                             console.error("Invalid delta payload", err);
                         }
                     }
                 };
                 // set offer
-                return this.pc.setRemoteDescription({ type: 'offer', sdp: offer});
+                return this.pc.setRemoteDescription(offer);
             })
             .then(() => this.pc!.createAnswer())
             .then((answer) => {
                 return this.pc!.setLocalDescription(answer)
-                    .then(() => api.rtc.answer(this.documentId, answer.sdp!))
+                    .then(() => api.rtc.answer(this.documentId, this.pc!.localDescription!))
                     .then(() => { return; });
             })
             .catch((err) => {
@@ -49,19 +62,11 @@ export class DocRTC {
     }
 
     sendDelta(deltaObj: any): void {
-        if(!this.channel || this.channel.readyState !== `open`) return;
-        this.channel.send(JSON.stringify(deltaObj));
-    }
-
-    leave(): Promise<void> {
-        return api.rtc.leave(this.documentId)
-            .then(() => { return; })
-            .catch((err) => console.warn("RTC leave failed", err))
-            .finally(() => {
-                this.channel && this.channel.close();
-                this.pc && this.pc.close();
-                this.pc = null;
-                this.channel = null;
-            });
+        if(!this.channel || this.channel.readyState !== 'open') return;
+        const payload = {
+            sender: this.peerId,
+            delta: deltaObj
+        };
+        this.channel.send(JSON.stringify(payload));
     }
 }

@@ -140,16 +140,13 @@ export const versions = {
 
 export const rtc = {
   join: (documentId: string | number) =>
-    apiFetch<{ offer: string }>(`/api/documents/${documentId}/content/join/`),
+    apiFetch<RTCSessionDescriptionInit & { peerId: string }>(`/api/documents/${documentId}/data/join/`),
 
-  answer: (documentId: string | number, answer: string) =>
-    apiFetch<{ ok: boolean }>(`/api/documents/${documentId}/content/answer/`, {
+  answer: (documentId: string | number, answer: RTCSessionDescriptionInit) =>
+    apiFetch<{ ok: boolean }>(`/api/documents/${documentId}/data/answer/`, {
       method: 'POST',
-      body: JSON.stringify({ answer }),
+      body: JSON.stringify(answer),
     }),
-
-  leave: (documentId: string | number) =>
-    apiFetch<{ left: boolean }>(`/api/documents/${documentId}/content/leave/`),
 };
 
 export const api = { auth, documents, versions, rtc };
