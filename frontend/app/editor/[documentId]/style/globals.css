@@ -10,12 +10,6 @@
   --blue-hover: #1d4ed8;
   --input-border: #d1d5db;
   --slider-bg: rgba(37, 99, 235, 0.15);
-  /* --card: #0e2134;
-  --accent: #2563EB;
-  --text: #E5E7EB;
-  --muted: #9CA3AF;
-  --border: #1F2937; */
-  
 }
 
 @media (prefers-color-scheme: dark) {
@@ -36,21 +30,38 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Inter, Arial, Helvetica, sans-serif;
-  /* margin: 0;
-  padding: 0;
-  min-height: 100vh; */
 }
 
 header {
   background: var(--card-bg);
-  /* color: var(--foreground);   */
 }
 
 @media (prefers-color-scheme: dark) {
   header {
     background: var(--card-bg);
-    /* color: var(--foreground); */
   }
+}
+
+.header-dark {
+    background-color: black;
+    color: white;
+}
+
+/* Ensure title (h1) inside the dark header is white */
+.header-dark h1 {
+    color: white !important;
+}
+
+.header-dark button {
+    background-color: white !important;
+    color: black !important;
+    border: 1px solid white;
+}
+
+.header-dark button:hover {
+    background-color: #f0f0f0 !important;
+    transform: none;
+    box-shadow: none;
 }
 
 button {
@@ -77,11 +88,15 @@ button:hover {
 }
 
 .ql-editor {
-  min-height: 350px; /* your custom height */
+  min-height: 350px;
   font-family: Inter, Arial, sans-serif;
   font-size: 14px;
   color: black;
   background-color: white;
+}
+
+.ql-editor .ql-font-background {
+    background-color: #ffeb3b !important;
 }
 
 .ql-toolbar {
@@ -91,16 +106,85 @@ button:hover {
   background-color: white;
 }
 
-h1, h2 {
+h1,
+h2 {
   color: var(--text-dark);
 }
 
 @media (prefers-color-scheme: dark) {
-  h1, h2 {
+  h1,
+  h2 {
     color: var(--text-dark);
   }
 }
 
 * {
   transition: background 0.3s ease, color 0.3s ease;
+}
+
+.table-context-menu {
+  position: absolute;
+  background-color: #111111;
+  border: 1px solid #444444;
+  border-radius: 4px;
+  padding: 8px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  min-width: 160px;
+}
+
+.table-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background-color: #111111;
+  color: #ffffff;
+  border: 1px solid #444444;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.table-context-menu button:hover {
+  background-color: #222222;
+  border-color: #666666;
+  color: #ffffff;
+}
+
+.ql-toolbar .ql-insert-custom-table {
+  color: #444;
+  background: none;
+  border: none;
+}
+
+.ql-toolbar .ql-insert-custom-table:hover {
+  background-color: rgba(0,0,0,0.05);
+}
+
+.ql-toolbar.ql-snow .ql-table,
+.ql-toolbar.ql-snow .ql-signature {
+  color: #000000;
+  opacity: 1;
+  font-size: 1.2em;
+  padding: 3px 5px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.ql-toolbar.ql-snow .ql-table:hover,
+.ql-toolbar.ql-snow .ql-signature:hover {
+  color: #000000;
+  opacity: 0.8;
+}
+
+.ql-toolbar.ql-snow .ql-stroke {
+  stroke: #000000;
+}
+
+.ql-toolbar.ql-snow .ql-fill {
+  fill: #000000;
 }

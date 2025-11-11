@@ -70,6 +70,19 @@ export class DocRTC {
             })
     }
 
+    leave(): void {
+    if (this.channel) {
+        this.channel.close();
+        this.channel = null;
+    }
+    if (this.pc) {
+        this.pc.close();
+        this.pc = null;
+    }
+    console.log("Disconnected from document RTC");
+}
+
+
     sendDelta(deltaObj: any): void {
         if(!this.channel || this.channel.readyState !== 'open') return;
         const payload = {
