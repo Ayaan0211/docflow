@@ -17,25 +17,20 @@ export default function Home() {
     []
   );
 
-  //Dropdown state
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
-
   //More options modal states
   const [showOptionsModal, setShowOptionsModal] = useState(false);
 
-  //Rename modal states
-  const [showRenameModal, setShowRenameModal] = useState(false);
+  //Rename doc states
   const [renameTitle, setRenameTitle] = useState("");
   const [selectDocId, setSelectDocId] = useState<number | null>(null);
 
-  //Share modal states
-  const [showShareModal, setShowShareModal] = useState(false);
+  //Share doc states
   const [shareEmail, setShareEmail] = useState("");
   const [sharePermission, setSharePermission] = useState<"view" | "edit">(
     "view"
   );
 
-  //Document permissions
+  //Doc permissions states
   const [sharedUsers, setSharedUsers] = useState<
     DocumentSharesResponse["shared_users"]
   >([]);
@@ -105,7 +100,6 @@ export default function Home() {
     try {
       await api.documents.updateTitle(selectDocId, renameTitle);
       console.log("Document renamed:", selectDocId);
-      setShowRenameModal(false);
       setRenameTitle("");
       setSelectDocId(null);
       await fetchDocuments();
@@ -120,7 +114,6 @@ export default function Home() {
     try {
       await api.documents.share(selectDocId, shareEmail, sharePermission);
       console.log("Document shared:", selectDocId);
-      setShowShareModal(false);
       setShareEmail("");
       setSharePermission("view");
       const response = await api.documents.getAllSharedUsers(selectDocId);
@@ -130,6 +123,18 @@ export default function Home() {
       console.error("Error sharing document:", error);
     }
   };
+
+  const handleUpdatePermission = async (userEmail: string, newPermission: "view" | "edit") => {
+    try {
+      await api.documents.share(selectDocId!, userEmail, newPermission);
+      console.log("Updated permission for", userEmail);
+      
+      const response = await api.documents.getAllSharedUsers(selectDocId!);
+      setSharedUsers(response.shared_users);
+    } catch (error) {
+      console.log("Error updating permission:", error);
+    }
+  }
 
   return (
     <>
@@ -268,38 +273,40 @@ export default function Home() {
               )}
 
               {/* More Options */}
-              <button
-                className="more-options-button absolute bottom-2 right-2"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  setSelectDocId(doc.document_id);
-                  setRenameTitle(doc.title);
-                  setShowOptionsModal(true);
+              {doc.permission === "owner" && (
+                <button
+                  className="more-options-button absolute bottom-2 right-2"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setSelectDocId(doc.document_id);
+                    setRenameTitle(doc.title);
+                    setShowOptionsModal(true);
 
-                  //Fetch shared users
-                  try {
-                    const response = await api.documents.getAllSharedUsers(
-                      doc.document_id
-                    );
-                    console.log(
-                      "Shared users response:",
-                      response.shared_users
-                    );
-                    setSharedUsers(response.shared_users);
-                  } catch (error) {
-                    console.log("Error fetching users", error);
-                    setSharedUsers([]);
-                  }
-                }}
-              >
-                <Image
-                  className="inline-block"
-                  src="/setting.png"
-                  alt="More Options Icon"
-                  width={30}
-                  height={30}
-                />
-              </button>
+                    //Fetch shared users
+                    try {
+                      const response = await api.documents.getAllSharedUsers(
+                        doc.document_id
+                      );
+                      console.log(
+                        "Shared users response:",
+                        response.shared_users
+                      );
+                      setSharedUsers(response.shared_users);
+                    } catch (error) {
+                      console.log("Error fetching users", error);
+                      setSharedUsers([]);
+                    }
+                  }}
+                >
+                  <Image
+                    className="inline-block"
+                    src="/setting.png"
+                    alt="More Options Icon"
+                    width={30}
+                    height={30}
+                  />
+                </button>
+              )}
             </div>
           ))}
 
@@ -383,16 +390,14 @@ export default function Home() {
                               {user.permission}
                             </p>
                           </div>
+
+                          {/* Modify permissions */}
                           <div className="flex items-center gap-2">
                             <select
                               className="border border-gray-300 rounded px-2 py-1 text-sm"
                               value={user.permission}
                               onChange={(e) => {
-                                console.log(
-                                  "Update permission to: ",
-                                  e.target.value
-                                );
-                                //Add api call
+                                handleUpdatePermission(user.email, e.target.value as "view" | "edit")
                               }}
                             >
                               <option value="view">View</option>
