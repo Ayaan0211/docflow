@@ -1,5 +1,7 @@
-Edit Icon: https://www.flaticon.com/free-icon/edit_1159633?term=edit&page=1&position=1&origin=search&related_id=1159633
-Create Icon: https://www.flaticon.com/free-icon/edit_10015412?term=create&page=1&position=1&origin=search&related_id=10015412
+Editable Icon: https://www.flaticon.com/free-icon/edit_10015412?term=create&page=1&position=1&origin=search&related_id=10015412
 Sign Out: https://www.flaticon.com/free-icon/logout_992680?term=sign+out&page=1&position=2&origin=search&related_id=992680
 Delete icon: https://www.flaticon.com/free-icon/x_657059?term=delete&page=1&position=31&origin=search&related_id=657059
-3 dots: https://www.flaticon.com/free-icon/three-dots_4023100?term=three+dots&page=1&position=32&origin=search&related_id=4023100
+3 Dots Icon: https://www.flaticon.com/free-icon/three-dots_4023100?term=three+dots&page=1&position=32&origin=search&related_id=4023100
+Create Icon: https://www.flaticon.com/free-icon/new-document_4210025?term=create+new&page=1&position=14&origin=search&related_id=4210025
+Viewable Icon: https://www.flaticon.com/free-icon/eye_2533656?term=eye&page=1&position=79&origin=search&related_id=2533656
+Settings Icon: https://www.flaticon.com/free-icon/setting_2040504?term=settings&page=1&position=1&origin=search&related_id=2040504
