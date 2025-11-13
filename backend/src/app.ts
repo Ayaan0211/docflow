@@ -508,10 +508,10 @@ app.get("/api/user/documents/", isAuthenticated, function(req: Request, res: Res
           if (err) return res.status(500).end(err);
           const totalDocuments = parseInt(totalDocumentsRow.rows[0].count);
           pool.query(`
-            SELECT DISTINCT d.document_id, d.owner_id, d.title, d.last_modified, u.name as owner_name
+            SELECT DISTINCT d.document_id, d.owner_id, d.title, d.last_modified, u.name as owner_name, CASE WHEN d.owner_id = $1 THEN 'owner' else s.permission END as permission
             FROM documents d
             JOIN users u ON d.owner_id = u.id
-            LEFT JOIN shared_documents s ON d.document_id = s.document_id
+            LEFT JOIN shared_documents s ON d.document_id = s.document_id AND s.user_id = $1
             WHERE d.owner_id = $1 OR s.user_id = $1
             ORDER BY last_modified DESC
             LIMIT $2 OFFSET $3
@@ -645,6 +645,57 @@ app.get("/api/documents/:documentId/versions/:versionId", isAuthenticated, funct
             });
         });
     });
+});
+
+// get all shares users with their perms (only owner can do this)
+app.get("/api/documents/:documentId/shared/", isAuthenticated, function(req: Request, res: Response, next: NextFunction) {
+  const docId = parseInt(req.params.documentId);
+  const page = parseInt(req.query.page as string);
+  const maxSharedUsers = parseInt(req.query.maxSharedUsers as string);
+  const offset = (page - 1) * maxSharedUsers;
+  pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+  `, [req.email], (err, userIdRow) => {
+    if (err) return res.status(500).end(err);
+    if (userIdRow.rows.length === 0) return res.status(401).end("Invalid session");
+    const userId = userIdRow.rows[0].id;
+    pool.query(`
+      SELECT owner_id
+      FROM documents
+      WHERE document_id = $1
+    `, [docId], (err, ownerIdRow) => {
+      if (err) return res.status(500).end(err);
+      if (ownerIdRow.rows.length === 0) return res.status(404).end("Document not found");
+      const ownerId = ownerIdRow.rows[0].owner_id;
+      if (userId !== ownerId) return res.status(403).end("You don't have permission to view this version");
+      pool.query(`
+        SELECT COUNT(user_id)
+        FROM shared_documents
+        WHERE document_id = $1 
+      `, [docId], (err, totalRowsRow) => {
+        if (err) return res.status(500).end(err);
+        if (totalRowsRow.rows.length === 0) return res.status(401).end("Invalid session");
+        const totalSharedUsers = parseInt(totalRowsRow.rows[0].count);
+        pool.query(`
+          SELECT u.name, u.id, s.permission
+          FROM users u
+          JOIN shared_documents s ON u.id = s.user_id
+          WHERE document_id = $1
+          LIMIT $2 OFFSET $3
+        `, [docId, maxSharedUsers, offset], (err, resultRow) => {
+          if (err) return res.status(500).end(err);
+          res.json({
+            shared_users: resultRow.rows,
+            hasPrev: page > 1,
+            hasNext: (page * maxSharedUsers) < totalSharedUsers,
+            documentId: docId,
+          });
+        });
+      });
+    });
+  });
 });
 
 // UPDATE

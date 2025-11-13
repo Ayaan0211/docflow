@@ -39,7 +39,20 @@ export interface DocumentsResponse {
     owner_id: number;
     title: string;
     last_modified: string;
+    owner_name: string;
+    permission: string;
   }>;
+}
+
+export interface DocumentSharesResponse {
+  shared_users: Array<{
+    name: string,
+    id: number,
+    permission: string,
+  }>;
+  hasPrev: boolean;
+  hasNext: boolean;
+  document_id: number;
 }
 
 export interface Version {
@@ -121,6 +134,9 @@ export const documents = {
       method: 'DELETE',
       body: JSON.stringify({ email }),
     }),
+
+  getAllSharedUsers: (documentId: string | number, page = 1, maxSharedUsers = 10) =>
+    apiFetch<DocumentSharesResponse>(`/api/documents/${documentId}/shared/?page=${page}&maxSharedUsers=${maxSharedUsers}`),
 };
 
 export const versions = {
