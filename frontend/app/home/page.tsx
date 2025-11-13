@@ -1,6 +1,6 @@
 "use client";
 
-import { api, DocumentsResponse } from "../api";
+import { api, DocumentsResponse, DocumentSharesResponse } from "../api";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -20,6 +20,9 @@ export default function Home() {
   //Dropdown state
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
+  //More options modal states
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
+
   //Rename modal states
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameTitle, setRenameTitle] = useState("");
@@ -28,7 +31,14 @@ export default function Home() {
   //Share modal states
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareEmail, setShareEmail] = useState("");
-  const [sharePermission, setSharePermission] = useState<"view" | "edit">("view");
+  const [sharePermission, setSharePermission] = useState<"view" | "edit">(
+    "view"
+  );
+
+  //Document permissions
+  const [sharedUsers, setSharedUsers] = useState<
+    DocumentSharesResponse["shared_users"]
+  >([]);
 
   useEffect(() => {
     async function loadSession() {
@@ -113,12 +123,13 @@ export default function Home() {
       setShowShareModal(false);
       setShareEmail("");
       setSharePermission("view");
-      setSelectDocId(null);
+      const response = await api.documents.getAllSharedUsers(selectDocId);
+      setSharedUsers(response.shared_users);
       await fetchDocuments();
     } catch (error) {
       console.error("Error sharing document:", error);
     }
-  }
+  };
 
   return (
     <>
@@ -148,13 +159,16 @@ export default function Home() {
       {/* Create new document */}
       <div className="p-8">
         <div className="flex justify-center">
-          <div className="card w-100 h-50" onClick={() => setShowModal(true)}>
+          <div
+            className="card w-100 h-50 cursor-pointer"
+            onClick={() => setShowModal(true)}
+          >
             <h2 className="text-lg font-semibold text-center pt-4 pb-2">
               Create New
             </h2>
             <Image
               className="m-auto"
-              src="/create.png"
+              src="/new.png"
               alt="Plus Icon"
               width={75}
               height={75}
@@ -165,11 +179,11 @@ export default function Home() {
         {/* New document modal */}
         {showModal && (
           <div
-            className="fixed inset-0 flex items-center justify-center bg-black-500 backdrop-blur-sm z-50"
+            className="fixed inset-0 flex items-center justify-center bg-black-500 backdrop-blur-sm z-50 animate-fadeIn"
             onClick={() => setShowModal(false)}
           >
             <div
-              className="modal-card p-6 rounded shadow-lg w-96"
+              className="modal-card p-6 rounded shadow-lg w-96 animate-slideUp"
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl font-bold mb-4">Create New Document</h2>
@@ -190,80 +204,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Rename Document Modal */}
-        {showRenameModal && (
-          <div
-            className="fixed inset-0 flex items-center justify-center bg-black-500 backdrop-blur-sm z-50"
-            onClick={() => setShowRenameModal(false)}
-          >
-            <div
-              className="modal-card p-6 rounded shadow-lg w-96"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="text-xl font-bold mb-4">Rename Document</h2>
-              <input
-                type="text"
-                placeholder="New Document Title"
-                className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
-                value={renameTitle}
-                onChange={(e) => setRenameTitle(e.target.value)}
-              />
-              <div className="flex justify-end">
-                <button
-                  className="mr-2"
-                  onClick={() => setShowRenameModal(false)}
-                >
-                  Cancel
-                </button>
-                <button onClick={handleRenameDocument}>Rename</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Share Document Modal */}
-        {showShareModal && (
-          <div
-            className="fixed inset-0 flex items-center justify-center bg-black-500 backdrop-blur-sm z-50"
-            onClick={() => setShowShareModal(false)}
-          >
-            <div
-              className="modal-card p-6 rounded shadow-lg w-96"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="text-xl font-bold mb-4">Share Document</h2>
-              <input
-                type="email"
-                placeholder="Recipient's Email"
-                className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
-                value={shareEmail}
-                onChange={(e) => setShareEmail(e.target.value)}
-              />
-              <select
-                className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
-                value={sharePermission}
-                onChange={(e) =>
-                  setSharePermission(
-                    e.target.value as "view" | "edit"
-                  )
-                }
-              >
-                <option value="view">View Only</option>
-                <option value="edit">Edit</option>
-              </select>
-              <div className="flex justify-end">
-                <button
-                  className="mr-2"
-                  onClick={() => setShowShareModal(false)}
-                >
-                  Cancel
-                </button>
-                <button onClick={handleShareDocument}>Share</button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Existing Documents Section */}
         <h1 className="text-lg italic mb-4">Modify Existing Documents:</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 justify-items-center gap-4">
@@ -273,78 +213,244 @@ export default function Home() {
               className="card w-full max-w-100 h-50 relative cursor-pointer"
               onClick={() =>
                 router.push(`/editor/${doc.document_id.toString()}`)
-                // router.push(`/editorTemp/`)
               }
             >
+              {/* Title */}
               <h2 className="text-lg font-semibold text-center pt-4 pb-2">
                 {doc.title}
               </h2>
+
+              {/* Owner */}
+              <p className="text-center mb-2">Owner: {doc.owner_name}</p>
+
+              {/* Last Modified */}
               <p className="text-sm text-center opacity-70">
                 Last modified:{" "}
                 {new Date(doc.last_modified).toLocaleDateString()}
               </p>
-              <button
-                className="delete-button absolute top-2 right-2"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteDocument(doc.document_id.toString());
-                }}
-              >
+
+              {/* Edit or View Only */}
+              <div className="tooltip-container absolute bottom-0 left-0 -mb-12 -ml-4">
                 <Image
-                  className="m-auto"
-                  src="/x.png"
-                  alt="Delete Icon"
-                  width={25}
-                  height={25}
-                />
-              </button>
+                  src={
+                    doc.permission === "edit" || doc.permission === "owner"
+                      ? "/editable.png"
+                      : "/viewable.png"
+                  }
+                  alt="Permission Icon"
+                  width={35}
+                  height={35}
+                ></Image>
+                <span className="tooltip-text">
+                  {doc.permission === "edit" || doc.permission === "owner"
+                    ? "Can Edit"
+                    : "View Only"}
+                </span>
+              </div>
+
+              {/* Delete */}
+              {doc.permission === "owner" && (
+                <button
+                  className="delete-button absolute p-8 top-2 right-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteDocument(doc.document_id.toString());
+                  }}
+                >
+                  <Image
+                    className="m-auto"
+                    src="/x.png"
+                    alt="Delete Icon"
+                    width={25}
+                    height={25}
+                  />
+                </button>
+              )}
+
+              {/* More Options */}
               <button
-                className="more-options-button absolute bottom-4 right-4"
-                onClick={(e) => {
+                className="more-options-button absolute bottom-2 right-2"
+                onClick={async (e) => {
                   e.stopPropagation();
-                  setOpenDropdown(
-                    openDropdown === doc.document_id ? null : doc.document_id
-                  );
+                  setSelectDocId(doc.document_id);
+                  setRenameTitle(doc.title);
+                  setShowOptionsModal(true);
+
+                  //Fetch shared users
+                  try {
+                    const response = await api.documents.getAllSharedUsers(
+                      doc.document_id
+                    );
+                    console.log(
+                      "Shared users response:",
+                      response.shared_users
+                    );
+                    setSharedUsers(response.shared_users);
+                  } catch (error) {
+                    console.log("Error fetching users", error);
+                    setSharedUsers([]);
+                  }
                 }}
               >
                 <Image
                   className="inline-block"
-                  src="/three-dots.png"
+                  src="/setting.png"
                   alt="More Options Icon"
-                  width={16}
-                  height={16}
+                  width={30}
+                  height={30}
                 />
               </button>
-
-              {/* More options dropdown */}
-              {openDropdown === doc.document_id && (
-                <div className="absolute bottom-12 right-4 bg-black shadow-lg rounded p-4 z-20 w-48">
-                  <button
-                    className="w-full text-left px-2 py-2 hover:bg-gray-100 rounded mb-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectDocId(doc.document_id);
-                      setShowRenameModal(true);
-                      setOpenDropdown(null);
-                    }}
-                  >
-                    Rename Document
-                  </button>
-                  <button
-                    className="w-full text-left px-2 py-2 hover:bg-gray-100 rounded"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectDocId(doc.document_id);
-                      setShowShareModal(true);
-                      setOpenDropdown(null);
-                    }}
-                  >
-                    Share Document
-                  </button>
-                </div>
-              )}
             </div>
           ))}
+
+          {showOptionsModal && selectDocId !== null && (
+            <div
+              className="fixed inset-0 flex items-center justify-center bg-black-500 backdrop-blur-sm z-50 animate-fadeIn"
+              onClick={() => setShowOptionsModal(false)}
+            >
+              <div
+                className="modal-card p-6 rounded shadow-lg w-96 animate-slideUp"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Rename Section */}
+                <h2 className="text-xl font-bold mb-4">Rename Doc</h2>
+                <input
+                  type="text"
+                  placeholder="New Document Title"
+                  className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+                  value={renameTitle}
+                  onChange={(e) => setRenameTitle(e.target.value)}
+                />
+                <div className="flex justify-end">
+                  <button
+                    className="mr-2"
+                    onClick={() => {
+                      setShowOptionsModal(false);
+                      setSelectDocId(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button onClick={handleRenameDocument}>Rename</button>
+                </div>
+
+                <hr className="my-4 border-gray-300" />
+
+                {/* Share Section */}
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold mb-4">Share Document</h3>
+                  <input
+                    type="email"
+                    placeholder="Recipient's Email"
+                    className="w-full border border-gray-300 rounded px-3 py-2 mb-2"
+                    value={shareEmail}
+                    onChange={(e) => setShareEmail(e.target.value)}
+                  />
+                  <select
+                    className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+                    value={sharePermission}
+                    onChange={(e) =>
+                      setSharePermission(e.target.value as "view" | "edit")
+                    }
+                  >
+                    <option value="view">View Only</option>
+                    <option value="edit">Edit</option>
+                  </select>
+                  <button className="w-full" onClick={handleShareDocument}>
+                    Share
+                  </button>
+                </div>
+
+                <hr className="my-4 border-gray-300" />
+
+                {/* Shared Users Section */}
+                <div className="mb-4">
+                  <h2 className="text-xl font-bold mb-4">Shared With:</h2>
+
+                  {/* Shared Users List */}
+                  <div>
+                    {sharedUsers.length === 0 ? (
+                      <p>This document has not been shared yet</p>
+                    ) : (
+                      sharedUsers.map((user) => (
+                        <div
+                          key={user.email}
+                          className="flex items-center justify-between p-3 "
+                        >
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="font-small text-gray-500">
+                              {user.permission}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <select
+                              className="border border-gray-300 rounded px-2 py-1 text-sm"
+                              value={user.permission}
+                              onChange={(e) => {
+                                console.log(
+                                  "Update permission to: ",
+                                  e.target.value
+                                );
+                                //Add api call
+                              }}
+                            >
+                              <option value="view">View</option>
+                              <option value="edit">Edit</option>
+                            </select>
+
+                            {/* Delete Shared User */}
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+
+                                try {
+                                  await api.documents.removeSharedUser(
+                                    selectDocId,
+                                    user.email
+                                  );
+
+                                  const response =
+                                    await api.documents.getAllSharedUsers(
+                                      selectDocId
+                                    );
+                                  setSharedUsers(response.shared_users);
+                                } catch (error) {
+                                  console.log("Error removing user", error);
+                                }
+                              }}
+                            >
+                              <Image
+                                src="/x.png"
+                                alt="Remove"
+                                width={16}
+                                height={16}
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Close Button */}
+                  <div>
+                    <button
+                      className="mt-4"
+                      onClick={() => {
+                        setShowOptionsModal(false);
+                        setSelectDocId(null);
+                        setShareEmail("");
+                        setSharePermission("view");
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
