@@ -47,8 +47,8 @@ export interface DocumentsResponse {
 export interface DocumentSharesResponse {
   shared_users: Array<{
     name: string,
-    id: number,
     permission: string,
+    email: string,
   }>;
   hasPrev: boolean;
   hasNext: boolean;

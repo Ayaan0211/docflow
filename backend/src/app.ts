@@ -669,20 +669,19 @@ app.get("/api/documents/:documentId/shared/", isAuthenticated, function(req: Req
       if (err) return res.status(500).end(err);
       if (ownerIdRow.rows.length === 0) return res.status(404).end("Document not found");
       const ownerId = ownerIdRow.rows[0].owner_id;
-      if (userId !== ownerId) return res.status(403).end("You don't have permission to view this version");
+      if (userId !== ownerId) return res.status(403).end("You don't have permission to view shared users");
       pool.query(`
         SELECT COUNT(user_id)
         FROM shared_documents
         WHERE document_id = $1 
       `, [docId], (err, totalRowsRow) => {
         if (err) return res.status(500).end(err);
-        if (totalRowsRow.rows.length === 0) return res.status(401).end("Invalid session");
         const totalSharedUsers = parseInt(totalRowsRow.rows[0].count);
         pool.query(`
-          SELECT u.name, u.id, s.permission
+          SELECT u.name, s.permission, u.email
           FROM users u
           JOIN shared_documents s ON u.id = s.user_id
-          WHERE document_id = $1
+          WHERE s.document_id = $1
           LIMIT $2 OFFSET $3
         `, [docId, maxSharedUsers, offset], (err, resultRow) => {
           if (err) return res.status(500).end(err);
@@ -690,7 +689,7 @@ app.get("/api/documents/:documentId/shared/", isAuthenticated, function(req: Req
             shared_users: resultRow.rows,
             hasPrev: page > 1,
             hasNext: (page * maxSharedUsers) < totalSharedUsers,
-            documentId: docId,
+            document_id: docId,
           });
         });
       });
