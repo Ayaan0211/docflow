@@ -104,43 +104,29 @@ export default function Editor() {
       }, 100);
 
       let applyingRemote = false;
-      let pending = new DeltaModule();
       let snapshotApplied = false;
       let queuedDeltas: any[] = [];
 
-      function isEmpty(d: any) {
-        return !d || !d.ops || d.ops.length === 0;
-      }
-
-      function handleRemoteDelta(deltaObj: any) {
-        if (!snapshotApplied) {
-          queuedDeltas.push(deltaObj);
-          return;
-        }
-        if (!quillRef.current) return;
-        const remote = new DeltaModule(deltaObj);
-        const transformedRemote = isEmpty(pending) ? remote : remote.transform(pending, true);
-        applyingRemote = true;
-        quillRef.current.updateContents(transformedRemote, "api");
-        applyingRemote = false;
-        pending = isEmpty(pending) ? pending : pending.transform(transformedRemote, false);
-      }
-
       if (!rtcRef.current && mounted) {
-        rtcRef.current = new DocRTC(Number(documentId), (payload: any) => {
+        rtcRef.current = new DocRTC(Number(documentId), (deltaOrSnapshot, version) => {
           if (!quillRef.current) return;
-          if (payload && payload.snapshot) {
+          if (!snapshotApplied) {
             snapshotApplied = true;
             applyingRemote = true;
-            quillRef.current.setContents(payload.snapshot, "api");
+            quillRef.current.setContents(deltaOrSnapshot, "api");
             applyingRemote = false;
-            pending = new DeltaModule();
             if (canEditRef.current) quillRef.current.enable();
-            for (const d of queuedDeltas) handleRemoteDelta(d);
+            for (const d of queuedDeltas) {
+              applyingRemote = true;
+              quillRef.current.updateContents(d, "api");
+              applyingRemote = false;
+            }
             queuedDeltas = [];
             return;
           }
-          handleRemoteDelta(payload);
+          applyingRemote = true;
+          quillRef.current.updateContents(deltaOrSnapshot, "api");
+          applyingRemote = false;
         });
         rtcRef.current.connect();
         setTimeout(() => {
@@ -153,9 +139,7 @@ export default function Editor() {
       quillRef.current.on("text-change", (delta: any, oldDelta: any, source: string) => {
         if (!snapshotApplied) return;
         if (source === "user" && !applyingRemote) {
-          const d = new DeltaModule(delta);
-          pending = pending.compose(d);
-          rtcRef.current?.sendDelta(d);
+          rtcRef.current?.sendDelta(delta);
         }
       });
     };

@@ -1,7 +1,8 @@
 "use client";
 import { api } from "../../api";
+import Delta from 'quill-delta';
 
-type OnDeltaHandler = (delta: any) => void;
+type OnDeltaHandler = (delta: any, version?: number) => void;
 
 export class DocRTC {
     private pc: RTCPeerConnection | null = null;
@@ -9,6 +10,8 @@ export class DocRTC {
     private documentId: number;
     private onDelta?: OnDeltaHandler;
     private peerId: string;
+    private serverVersion = 0;
+    private pending: Delta | null = null;
 
     constructor(documentId: number, onDelta?: OnDeltaHandler) {
         this.documentId = documentId;
@@ -40,16 +43,25 @@ export class DocRTC {
                         try {
                             const msg = JSON.parse(e.data);
                             if (msg.type === 'snapshot') {
-                                this.onDelta && this.onDelta({ snapshot: msg.content })
+                                const snapshot = new Delta(msg.content.ops);
+                                this.serverVersion = msg.version ?? 0;
+                                this.pending = null;
+                                this.onDelta && this.onDelta(snapshot, this.serverVersion);
                                 return;
                             }
                             if (msg.type === 'delta') {
                                 if (!msg.delta) return;
-                                if (msg.sender !== this.peerId) {
-                                    this.onDelta && this.onDelta(msg.delta);
-                                } else {
-                                    return;
+                                let incoming = new Delta(msg.delta);
+                                if (msg.sender === this.peerId) {
+                                    this.pending = null;
+                                    this.serverVersion = msg.version;
+                                     return;
                                 }
+                                // transfrom remote ops against local ops
+                                if (this.pending) incoming = incoming.transform(this.pending, true);
+                                this.serverVersion = msg.version;
+                                this.onDelta && this.onDelta(incoming, this.serverVersion);
+                                if (this.pending) this.pending = this.pending.transform(incoming, false);
                             }
                         } catch (err) {
                             console.error("Invalid delta payload", err);
@@ -79,15 +91,22 @@ export class DocRTC {
         this.pc.close();
         this.pc = null;
     }
-    console.log("Disconnected from document RTC");
 }
 
 
     sendDelta(deltaObj: any): void {
         if(!this.channel || this.channel.readyState !== 'open') return;
+        const d = new Delta(deltaObj);
+        if (this.pending) {
+            this.pending = this.pending.compose(d);
+        } else { 
+            this.pending = d;
+        }
+
         const payload = {
             sender: this.peerId,
-            delta: deltaObj
+            delta: deltaObj,
+            baseVersion: this.serverVersion
         };
         this.channel.send(JSON.stringify(payload));
     }

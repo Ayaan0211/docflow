@@ -2,6 +2,7 @@ import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } from "@kous
 import Delta from 'quill-delta';
 import { pool } from './app';
 import { randomUUID } from "crypto";
+import { version } from "os";
 
 (global as any).RTCPeerConnection = RTCPeerConnection;
 (global as any).RTCSessionDescription = RTCSessionDescription;
@@ -18,8 +19,8 @@ interface Room {
     documentId: number;
     peers: UserSession[];
     docState: Delta;
-    createdAt: number;
-    lastActiveAt: number;
+    ops: Delta[];
+    version: number;
 }
 
 export const rooms: Record<number, Room> = {};
@@ -50,8 +51,8 @@ export function joinRoom(documentId: number, userId: number, cb: (offer: string)
                         documentId,
                         peers: [],
                         docState: new Delta(parsed),
-                        createdAt: Date.now(),
-                        lastActiveAt: Date.now()
+                        ops: [],
+                        version: 0
                     };
                 } catch (parseError) {
                     console.error("Error initializing Delta for document", documentId, parseError);
@@ -140,26 +141,34 @@ function createPeer(documentId: number, userId: number, cb: (offer: any) => void
         // send a snapshot with the authoritative state
         channel.send(JSON.stringify({
             type: 'snapshot',
-            content: room.docState
+            content: room.docState,
+            version: room.version
         }));
     };
 
     channel.onmessage = (event: any) => {
         const msg = JSON.parse(event.data);
-        const { sender, delta } = msg;
+        const { sender, delta, baseVersion } = msg;
         const room = rooms[documentId];
-        try {
-            const d = new Delta(delta);
-            room.docState = room.docState.compose(d);
-            room.lastActiveAt = Date.now();
-        } catch (err) {
-            console.error(`Failed to apply delta to doc ${documentId}:`, err);
-        }
         if (!room) return;
+
+        const original = new Delta(delta);
+        let transformed = new Delta(delta);
+
+        const opsToTransformAgainst = room.ops.slice(baseVersion);
+        for (const op of opsToTransformAgainst) transformed = transformed.transform(op, true);
+        // apply transformed delta
+        room.docState = room.docState.compose(transformed);
+        room.ops.push(transformed)
+        room.version++;
         for (const p of room.peers) {
-            if (p.peerId !== sender && p.userId !== userId && p.dataChannel?.readyState === "open") {
-            p.dataChannel.send(JSON.stringify({ type: 'delta', sender: peerId, delta }));
-            }
+            if (p.dataChannel?.readyState !== "open") continue;
+            p.dataChannel.send(JSON.stringify({ 
+                type: 'delta', 
+                sender, 
+                delta: transformed, 
+                version: room.version
+            }));
         }
     };
 
