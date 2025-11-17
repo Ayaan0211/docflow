@@ -96,16 +96,15 @@ export class DocRTC {
 
     sendDelta(deltaObj: any): void {
         if(!this.channel || this.channel.readyState !== 'open') return;
-        const d = new Delta(deltaObj);
+        let d = new Delta(deltaObj);
         if (this.pending) {
-            this.pending = this.pending.compose(d);
-        } else { 
-            this.pending = d;
+            d = d.transform(this.pending, false); 
         }
+        this.pending = this.pending ? this.pending.compose(d) : d;
 
         const payload = {
             sender: this.peerId,
-            delta: deltaObj,
+            delta: d,
             baseVersion: this.serverVersion
         };
         this.channel.send(JSON.stringify(payload));
