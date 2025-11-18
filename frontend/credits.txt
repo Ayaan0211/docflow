@@ -5,3 +5,4 @@ Delete icon: https://www.flaticon.com/free-icon/x_657059?term=delete&page=1&posi
 Create Icon: https://www.flaticon.com/free-icon/new-document_4210025?term=create+new&page=1&position=14&origin=search&related_id=4210025
 Viewable Icon: https://www.flaticon.com/free-icon/eye_2533656?term=eye&page=1&position=79&origin=search&related_id=2533656
 Settings Icon: https://www.flaticon.com/free-icon/setting_2040504?term=settings&page=1&position=1&origin=search&related_id=2040504
+Typing Animation: https://css-tricks.com/snippets/css/typewriter-effect/
