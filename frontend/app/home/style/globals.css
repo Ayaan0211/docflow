@@ -38,13 +38,11 @@ body {
 
 header {
   background: var(--card-bg);
-  /* color: var(--foreground);   */
 }
 
 @media (prefers-color-scheme: dark) {
   header {
     background: var(--card-bg);
-    /* color: var(--foreground); */
   }
 }
 
@@ -83,19 +81,20 @@ button:hover {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-.card {
-  background: var(--card-bg);
-  color: var(--text-dark);
-  border: 1px solid var(--border-light);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+.create-new {
   transition: all 0.3s ease;
 }
 
-.card:hover {
-  background: var(--slider-bg);
-  color: white;
+.create-new:hover {
+  transform: translateY(-5px);
+}
+
+.doc-card {
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+.doc-card:hover {
   transform: translateY(-5px);
 }
 
@@ -109,7 +108,7 @@ button:hover {
 }
 
 .delete-button {
-  background-color: #ef4444;
+  background-color: rgb(144, 143, 143);
   color: white;
   border: none;
   padding: 0.3rem 0.5rem;
@@ -120,7 +119,7 @@ button:hover {
 }
 
 .more-options-button {
-  background-color: #6b7280;
+  background-color: rgb(144, 143, 143);
   color: white;
   border: none;
   padding: 0.25rem 0.25rem;
@@ -144,7 +143,7 @@ h1, h2 {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Modal animations */
+/* Modal animations (AI Generated) */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -173,7 +172,7 @@ h1, h2 {
   animation: slideUp 0.3s ease-out;
 }
 
-/* Tooltip styles */
+/* Tooltip styles (AI Generated)*/
 .tooltip-container {
   position: relative;
   display: inline-block;

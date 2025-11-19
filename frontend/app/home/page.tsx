@@ -196,7 +196,7 @@ export default function Home() {
       <div className="p-2">
         <div className="flex justify-center">
           <div
-            className="cursor-pointer border-2 border-white rounded-xl px-24 py-8 hover:border-blue-500 transition-all"
+            className="create-new cursor-pointer border-2 border-white rounded-xl px-24 py-8 hover:border-blue-500 transition-all"
             onClick={() => setShowModal(true)}
           >
             <div className="p-4 rounded-full bg-blue-500 bg-opacity-10">
@@ -260,31 +260,37 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 justify-items-center gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 justify-items-center">
             {documents.map((doc) => (
               <div
                 key={doc.document_id}
-                className="card w-full max-w-100 h-50 relative cursor-pointer"
+                className="doc-card p-6 border rounded-md border-white hover:border-blue-500 relative cursor-pointer w-full max-w-sm"
                 onClick={() =>
                   router.push(`/editor/${doc.document_id.toString()}`)
                 }
               >
-                {/* Title */}
-                <h2 className="text-lg font-semibold text-center pt-4 pb-2">
-                  {doc.title}
-                </h2>
-
-                {/* Owner */}
-                <p className="text-center mb-2">Owner: {doc.owner_name}</p>
+                {/* Doc Info */}
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-md flex items-center justify-center bg-gradient-to-r from-purple-600 to-blue-400">
+                    {doc.title.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <h2 className="text-lg font-semibold text-left">
+                      {doc.title}
+                    </h2>
+                    <p className="text-sm opacity-70 text-left">
+                      Owner: {doc.owner_name}
+                    </p>
+                  </div>
+                </div>
 
                 {/* Last Modified */}
-                <p className="text-sm text-center opacity-70">
-                  Last modified:{" "}
-                  {new Date(doc.last_modified).toLocaleDateString()}
+                <p className="text-sm text-center opacity-70 text-left mb-4">
+                  Modified: {new Date(doc.last_modified).toDateString()}
                 </p>
 
-                {/* Edit or View Only */}
-                <div className="tooltip-container absolute bottom-0 left-0 -mb-12 -ml-4">
+                {/* Permissions Icon */}
+                <div className="tooltip-container absolute bottom-0 left-0 -mb-6 -ml-4">
                   <Image
                     src={
                       doc.permission === "edit" || doc.permission === "owner"
@@ -294,6 +300,7 @@ export default function Home() {
                     alt="Permission Icon"
                     width={35}
                     height={35}
+                    className="brightness-0 invert opacity-90"
                   ></Image>
                   <span className="tooltip-text">
                     {doc.permission === "edit" || doc.permission === "owner"
@@ -302,27 +309,63 @@ export default function Home() {
                   </span>
                 </div>
 
-                {/* Delete */}
+                {/* Permissions Buttons */}
                 {doc.permission === "owner" && (
-                  <button
-                    className="delete-button absolute p-8 top-2 right-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteDocument(doc.document_id.toString());
-                    }}
-                  >
-                    <Image
-                      className="m-auto"
-                      src="/x.png"
-                      alt="Delete Icon"
-                      width={25}
-                      height={25}
-                    />
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <button
+                      className="more-options-button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setSelectDocId(doc.document_id);
+                        setRenameTitle(doc.title);
+                        setShowOptionsModal(true);
+
+                        //Fetch shared users
+                        try {
+                          const response =
+                            await api.documents.getAllSharedUsers(
+                              doc.document_id
+                            );
+                          console.log(
+                            "Shared users response:",
+                            response.shared_users
+                          );
+                          setSharedUsers(response.shared_users);
+                        } catch (error) {
+                          console.log("Error fetching users", error);
+                          setSharedUsers([]);
+                        }
+                      }}
+                    >
+                      <Image
+                        className="inline-block"
+                        src="/setting.png"
+                        alt="More Options Icon"
+                        width={25}
+                        height={20}
+                      />
+                    </button>
+
+                    <button
+                      className="delete-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteDocument(doc.document_id.toString());
+                      }}
+                    >
+                      <Image
+                        className="m-auto"
+                        src="/x.png"
+                        alt="Delete Icon"
+                        width={20}
+                        height={20}
+                      />
+                    </button>
+                  </div>
                 )}
 
                 {/* More Options */}
-                {doc.permission === "owner" && (
+                {/* {doc.permission === "owner" && (
                   <button
                     className="more-options-button absolute bottom-2 right-2"
                     onClick={async (e) => {
@@ -355,10 +398,11 @@ export default function Home() {
                       height={30}
                     />
                   </button>
-                )}
+                )} */}
               </div>
             ))}
 
+            {/* Options Modal */}
             {showOptionsModal && selectDocId !== null && (
               <div
                 className="fixed inset-0 flex items-center justify-center bg-black-500 backdrop-blur-sm z-50 animate-fadeIn"
