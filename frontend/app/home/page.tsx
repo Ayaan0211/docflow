@@ -132,8 +132,15 @@ export default function Home() {
       const response = await api.documents.getAllSharedUsers(selectDocId);
       setSharedUsers(response.shared_users);
       await fetchDocuments();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sharing document:", error);
+      const errorMessage = error.message;
+      if (errorMessage.includes("is not a valid user")) {
+        showMessage("Error: User does not exist");
+      }
+      else {
+        showMessage("Error: not a valid email address")
+      }
     }
   };
 
@@ -251,7 +258,7 @@ export default function Home() {
         )}
 
         {/* Existing Documents Section */}
-        <h1 className="text-2xl mb-4 ml-2">Your Documents:</h1>
+        <h1 className="text-2xl mt-8 mb-4 ml-2">Your Documents:</h1>
         {documents.length === 0 ? (
           <div className="text-center py-16">
             <h3 className="text-2xl font-semibold mb-2">No documents yet</h3>
@@ -279,7 +286,7 @@ export default function Home() {
                       {doc.title}
                     </h2>
                     <p className="text-sm opacity-70 text-left">
-                      Owner: {doc.owner_name}
+                      Owner: {doc.owner_name}{doc.owner_name === username ? " (You)": ""}
                     </p>
                   </div>
                 </div>
@@ -363,42 +370,6 @@ export default function Home() {
                     </button>
                   </div>
                 )}
-
-                {/* More Options */}
-                {/* {doc.permission === "owner" && (
-                  <button
-                    className="more-options-button absolute bottom-2 right-2"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      setSelectDocId(doc.document_id);
-                      setRenameTitle(doc.title);
-                      setShowOptionsModal(true);
-
-                      //Fetch shared users
-                      try {
-                        const response = await api.documents.getAllSharedUsers(
-                          doc.document_id
-                        );
-                        console.log(
-                          "Shared users response:",
-                          response.shared_users
-                        );
-                        setSharedUsers(response.shared_users);
-                      } catch (error) {
-                        console.log("Error fetching users", error);
-                        setSharedUsers([]);
-                      }
-                    }}
-                  >
-                    <Image
-                      className="inline-block"
-                      src="/setting.png"
-                      alt="More Options Icon"
-                      width={30}
-                      height={30}
-                    />
-                  </button>
-                )} */}
               </div>
             ))}
 
@@ -431,7 +402,7 @@ export default function Home() {
                     >
                       Cancel
                     </button>
-                    <button onClick={handleRenameDocument}>Rename</button>
+                    <button onClick={handleRenameDocument} className="border-2 border-white">Rename</button>
                   </div>
 
                   <hr className="my-4 border-gray-300" />
@@ -456,7 +427,7 @@ export default function Home() {
                       <option value="view">View Only</option>
                       <option value="edit">Edit</option>
                     </select>
-                    <button className="w-full" onClick={handleShareDocument}>
+                    <button className="w-full border-2 border-white" onClick={handleShareDocument}>
                       Share
                     </button>
                   </div>
@@ -480,7 +451,7 @@ export default function Home() {
                             <div>
                               <p className="font-medium">{user.name}</p>
                               <p className="font-small text-gray-500">
-                                {user.permission}
+                                {user.permission === 'view' ? 'Viewer' : 'Editor'}
                               </p>
                             </div>
 
