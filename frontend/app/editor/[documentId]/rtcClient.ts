@@ -10,8 +10,12 @@ export class DocRTC {
     private documentId: number;
     private onDelta?: OnDeltaHandler;
     private peerId: string;
+    // last known server version we've integrated
     private serverVersion = 0;
+    // queued local ops while inflight is outstanding
     private pending: Delta | null = null;
+    // op we've sent, awaiting ack
+    private inflight: Delta | null = null;
 
     constructor(documentId: number, onDelta?: OnDeltaHandler) {
         this.documentId = documentId;
@@ -46,22 +50,37 @@ export class DocRTC {
                                 const snapshot = new Delta(msg.content.ops);
                                 this.serverVersion = msg.version ?? 0;
                                 this.pending = null;
+                                this.inflight = null;
                                 this.onDelta && this.onDelta(snapshot, this.serverVersion);
                                 return;
                             }
                             if (msg.type === 'delta') {
                                 if (!msg.delta) return;
-                                let incoming = new Delta(msg.delta);
                                 if (msg.sender === this.peerId) {
-                                    this.pending = null;
+                                    this.inflight = null;
                                     this.serverVersion = msg.version;
-                                     return;
+                                    if (this.pending && this.channel && this.channel.readyState === "open") {
+                                        const toSend = this.pending;
+                                        this.pending = null;
+                                        this.sendToServer(toSend);
+                                    }
+                                    return;
                                 }
-                                // transfrom remote ops against local ops
-                                if (this.pending) incoming = incoming.transform(this.pending, true);
-                                this.serverVersion = msg.version;
+                                // this is the remote op from another use, we have to use OT against inflight + pending
+                                let incoming = new Delta(msg.delta);
+                                if (this.inflight) {
+                                    incoming = incoming.transform(this.inflight, true);
+                                    this.inflight = this.inflight.transform(incoming, false);
+                                }
+                                if (this.pending) {
+                                    incoming = incoming.transform(this.pending, true);
+                                    this.pending = this.pending.transform(incoming, false);
+                                }
+                                this.serverVersion = msg.version ?? this.serverVersion;
                                 this.onDelta && this.onDelta(incoming, this.serverVersion);
-                                if (this.pending) this.pending = this.pending.transform(incoming, false);
+                                if (this.pending) {
+                                    this.pending = this.pending.transform(incoming, false);
+                                }
                             }
                         } catch (err) {
                             console.error("Invalid delta payload", err);
@@ -83,28 +102,32 @@ export class DocRTC {
     }
 
     leave(): void {
-    if (this.channel) {
-        this.channel.close();
-        this.channel = null;
+        if (this.channel) {
+            this.channel.close();
+            this.channel = null;
+        }
+        if (this.pc) {
+            this.pc.close();
+            this.pc = null;
+        }
     }
-    if (this.pc) {
-        this.pc.close();
-        this.pc = null;
-    }
-}
-
 
     sendDelta(deltaObj: any): void {
         if(!this.channel || this.channel.readyState !== 'open') return;
         let d = new Delta(deltaObj);
-        if (this.pending) {
-            d = d.transform(this.pending, false); 
+        if (!this.inflight) {
+            this.inflight = d;
+            this.sendToServer(d);
+            return;
         }
         this.pending = this.pending ? this.pending.compose(d) : d;
+    }
 
+    private sendToServer(delta: Delta) {
+        if (!this.channel || this.channel.readyState !== "open") return;
         const payload = {
             sender: this.peerId,
-            delta: d,
+            delta,
             baseVersion: this.serverVersion
         };
         this.channel.send(JSON.stringify(payload));
