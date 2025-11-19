@@ -56,6 +56,7 @@ export class DocRTC {
                             }
                             if (msg.type === 'delta') {
                                 if (!msg.delta) return;
+                                // ack for our own inflight op
                                 if (msg.sender === this.peerId) {
                                     this.inflight = null;
                                     this.serverVersion = msg.version;
@@ -67,20 +68,15 @@ export class DocRTC {
                                     return;
                                 }
                                 // this is the remote op from another use, we have to use OT against inflight + pending
-                                let incoming = new Delta(msg.delta);
+                                const incoming = new Delta(msg.delta);
                                 if (this.inflight) {
-                                    incoming = incoming.transform(this.inflight, true);
                                     this.inflight = this.inflight.transform(incoming, false);
                                 }
                                 if (this.pending) {
-                                    incoming = incoming.transform(this.pending, true);
                                     this.pending = this.pending.transform(incoming, false);
                                 }
                                 this.serverVersion = msg.version ?? this.serverVersion;
                                 this.onDelta && this.onDelta(incoming, this.serverVersion);
-                                if (this.pending) {
-                                    this.pending = this.pending.transform(incoming, false);
-                                }
                             }
                         } catch (err) {
                             console.error("Invalid delta payload", err);

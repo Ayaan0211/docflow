@@ -153,13 +153,8 @@ function createPeer(documentId: number, userId: number, cb: (offer: any) => void
         if (!room) return;
         
         let transformed = new Delta(delta);
-        for (let i = baseVersion; i < room.ops.length; i++) {
-            const op = room.ops[i];
-            const transformedIncoming = transformed.transform(op, true);
-            const transformedOp = op.transform(transformed, false);
-            room.ops[i] = transformedOp;
-            transformed = transformedIncoming
-        }
+        const opsToTransformAgainst = room.ops.slice(baseVersion);
+        for (const op of opsToTransformAgainst) transformed = transformed.transform(op, true);
         // apply transformed delta
         room.docState = room.docState.compose(transformed);
         room.ops.push(transformed)
