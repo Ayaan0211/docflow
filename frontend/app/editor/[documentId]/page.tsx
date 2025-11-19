@@ -90,6 +90,7 @@ export default function Editor() {
           table: true,
         },
       });
+      await loadDocument();
 
       quillRef.current.disable();
 
@@ -113,7 +114,12 @@ export default function Editor() {
           if (!snapshotApplied) {
             snapshotApplied = true;
             applyingRemote = true;
+            const currentCursorRange = quillRef.current.getSelection();
             quillRef.current.setContents(deltaOrSnapshot, "api");
+            if (currentCursorRange) {
+              const transformedIndex = deltaOrSnapshot.transformPosition(currentCursorRange.index, true);
+              quillRef.current.setSelection(transformedIndex, 0, "api")
+            }
             applyingRemote = false;
             if (canEditRef.current) quillRef.current.enable();
             for (const d of queuedDeltas) {
@@ -129,11 +135,6 @@ export default function Editor() {
           applyingRemote = false;
         });
         rtcRef.current.connect();
-        setTimeout(() => {
-          if (quillRef.current && quillRef.current.getLength() <= 1) {
-            loadDocument();
-          }
-        }, 2000);
       }
 
       quillRef.current.on("text-change", (delta: any, oldDelta: any, source: string) => {
@@ -559,9 +560,7 @@ export default function Editor() {
   const loadDocument = async () => {
     try {
       const response = await api.documents.getById(documentId);
-      if (response.document.content && quillRef.current) {
-        quillRef.current.setContents(response.document.content);
-      }
+      if (!editorRef.current || !quillRef.current) return;
       setTitle(response.document.title);
 
       if (!response.canEdit && quillRef.current) {

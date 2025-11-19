@@ -2,7 +2,6 @@ import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } from "@kous
 import Delta from 'quill-delta';
 import { pool } from './app';
 import { randomUUID } from "crypto";
-import { version } from "os";
 
 (global as any).RTCPeerConnection = RTCPeerConnection;
 (global as any).RTCSessionDescription = RTCSessionDescription;
@@ -152,19 +151,26 @@ function createPeer(documentId: number, userId: number, cb: (offer: any) => void
         const room = rooms[documentId];
         if (!room) return;
         
-        let transformed = new Delta(delta);
-        const opsToTransformAgainst = room.ops.slice(baseVersion);
-        for (const op of opsToTransformAgainst) transformed = transformed.transform(op, true);
+        let incoming = new Delta(delta);
+        for (let i = baseVersion; i < room.ops.length; i++) {
+            const oldOp = room.ops[i];
+            // trasform deltas
+            const incomingPrime = incoming.transform(oldOp, true);
+            const oldOpPrime = oldOp.transform(incoming, false);
+            // update history
+            room.ops[i] = oldOpPrime;
+            incoming = incomingPrime;
+        }
         // apply transformed delta
-        room.docState = room.docState.compose(transformed);
-        room.ops.push(transformed)
+        room.docState = room.docState.compose(incoming);
+        room.ops.push(incoming)
         room.version++;
         for (const p of room.peers) {
             if (p.dataChannel?.readyState !== "open") continue;
             p.dataChannel.send(JSON.stringify({ 
                 type: 'delta', 
                 sender, 
-                delta: transformed, 
+                delta: incoming, 
                 version: room.version
             }));
         }
