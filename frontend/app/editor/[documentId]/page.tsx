@@ -778,7 +778,7 @@ export default function Editor() {
           </button>
         </div>
       )}
-
+      {/*
       {showTablePicker && (
         <div className="header-dark flex items-center gap-3 px-6 py-3">
           <span className="text-sm">Table Size:</span>
@@ -809,6 +809,7 @@ export default function Editor() {
           </button>
         </div>
       )}
+      */}
 
       {showSignature && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
