@@ -137,6 +137,19 @@ export const documents = {
 
   getAllSharedUsers: (documentId: string | number, page = 1, maxSharedUsers = 10) =>
     apiFetch<DocumentSharesResponse>(`/api/documents/${documentId}/shared/?page=${page}&maxSharedUsers=${maxSharedUsers}`),
+
+  upload: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch("/api/user/documents/upload/", {
+      method: "POST",
+      credentials: process.env.NODE_ENV === "development" ? `include` : 'same-origin',
+      body: fd,
+    }).then(async (res): Promise<{ document: Document }> => {
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    });
+  },
 };
 
 export const versions = {

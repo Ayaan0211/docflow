@@ -13,10 +13,13 @@ import { Profile } from "passport-google-oauth20";
 import { VerifyCallback } from "passport-oauth2";
 import * as WebRTCManager from './webRTCManager';
 import { RTCSessionDescription } from "@koush/wrtc";
+import multer from "multer";
+import { extractQuillFromFile } from './openai';
 
 const PORT = 8080;
 const app = express();
 const saltRounds = 10;
+const upload = multer({ storage: multer.memoryStorage() });
 
 export const pool = new Pool({
     host: process.env.DB_HOST,
@@ -458,7 +461,40 @@ app.post("/api/documents/:documentId/versions/:versionId", isAuthenticated, func
     });
 });
 
+// upload document
+app.post("/api/user/documents/upload/", isAuthenticated, upload.single("file"),  function(req: Request, res: Response, next: NextFunction) {
+  if (!req.file) return res.status(400).end("No file uploaded");
+  const fileBuffer = req.file.buffer;
+  const mimetype = req.file.mimetype;
+  const filename = req.file.filename;
+  
+  extractQuillFromFile(fileBuffer, mimetype, filename, (err, delta) => {
+    if (err) return res.status(500).json({ error: err.message });
+    pool.query(`
+    SELECT id
+    FROM users
+    WHERE email = $1
+    `, [req.email], (err, userIdRow) => {
+      if (err) return res.status(500).end(err);
+      if (userIdRow.rows.length === 0) return res.status(500).end("Invalid session");
+      const userId = userIdRow.rows[0].id;
+      pool.query(`
+      INSERT INTO documents(owner_id, title, content) 
+      VALUES ($1, $2, $3) 
+      RETURNING document_id, title, content
+      `, [userId, filename, JSON.stringify(delta)], (err, result) => {
+        if (err) return res.status(500).end(err);
+        res.json({
+          document: result.rows[0]
+        })
+      });
+    });
+  })
+});
+
 // READ
+
+// session check
 app.get("/api/session/", function (req: Request, res: Response, next: NextFunction) {
   if (req.email) {
     pool.query(
