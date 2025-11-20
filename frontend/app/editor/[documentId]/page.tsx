@@ -131,7 +131,9 @@ export default function Editor() {
             return;
           }
           applyingRemote = true;
-          quillRef.current.updateContents(deltaOrSnapshot, "api");
+          const curr = quillRef.current.getContents();
+          const newDoc = curr.compose(deltaOrSnapshot);
+          quillRef.current.setContents(newDoc, "api");
           applyingRemote = false;
         });
         rtcRef.current.connect();
