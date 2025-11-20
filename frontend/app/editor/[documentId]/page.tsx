@@ -47,20 +47,20 @@ export default function Editor() {
       const QuillTable = QuillModule.import("modules/table");
       QuillModule.register("modules/table", QuillTable);
 
-      const customBindings = {
-        enterInTable: {
-          key: 13,
-          handler: function (this: any, range: any) {
-            const [line] = this.quill.getLine(range.index);
-            if (line && line.domNode && line.domNode.closest("td")) {
-              this.quill.insertText(range.index, "\n");
-              this.quill.setSelection(range.index + 1);
-              return false;
-            }
-            return true;
-          },
-        },
-      };
+      // const customBindings = {
+      //   enterInTable: {
+      //     key: 13,
+      //     handler: function (this: any, range: any) {
+      //       const [line] = this.quill.getLine(range.index);
+      //       if (line && line.domNode && line.domNode.closest("td")) {
+      //         this.quill.insertText(range.index, "\n");
+      //         this.quill.setSelection(range.index + 1);
+      //         return false;
+      //       }
+      //       return true;
+      //     },
+      //   },
+      // };
 
       const toolbarOptions = [
         [{ header: [1, 2, 3, false] }],
@@ -80,7 +80,7 @@ export default function Editor() {
             container: toolbarOptions,
           },
           keyboard: {
-            bindings: customBindings,
+            // bindings: customBindings,
           },
           history: {
             delay: 1000,
@@ -96,12 +96,12 @@ export default function Editor() {
 
       setTimeout(() => {
         if (!toolbarAddedRef.current) {
-          addCustomToolbarButtons();
+          // addCustomToolbarButtons();
           addTooltips();
           toolbarAddedRef.current = true;
         }
-        setupTableContextMenu();
-        setupTableSelection();
+        // setupTableContextMenu();
+        // setupTableSelection();
       }, 100);
 
       let applyingRemote = false;
@@ -156,40 +156,40 @@ export default function Editor() {
     };
   }, []);
 
-  const addCustomToolbarButtons = () => {
-    const toolbars = document.querySelectorAll(".ql-toolbar");
-    if (toolbars.length === 0) return;
+  // const addCustomToolbarButtons = () => {
+  //   const toolbars = document.querySelectorAll(".ql-toolbar");
+  //   if (toolbars.length === 0) return;
 
-    const toolbar = toolbars[0];
+  //   const toolbar = toolbars[0];
     
-    const existingTable = toolbar.querySelector(".ql-table");
-    const existingSign = toolbar.querySelector(".ql-signature");
+  //   const existingTable = toolbar.querySelector(".ql-table");
+  //   const existingSign = toolbar.querySelector(".ql-signature");
     
-    if (existingTable || existingSign) return;
+  //   if (existingTable || existingSign) return;
 
-    const tableBtn = document.createElement("button");
-    tableBtn.className = "ql-table";
-    tableBtn.innerHTML = "⊞";
-    tableBtn.title = "Insert Table";
-    tableBtn.type = "button";
-    tableBtn.onclick = (e) => {
-      e.preventDefault();
-      setShowTablePicker(!showTablePicker);
-    };
+  //   const tableBtn = document.createElement("button");
+  //   tableBtn.className = "ql-table";
+  //   tableBtn.innerHTML = "⊞";
+  //   tableBtn.title = "Insert Table";
+  //   tableBtn.type = "button";
+  //   tableBtn.onclick = (e) => {
+  //     e.preventDefault();
+  //     setShowTablePicker(!showTablePicker);
+  //   };
 
-    const signBtn = document.createElement("button");
-    signBtn.className = "ql-signature";
-    signBtn.innerHTML = "✍️";
-    signBtn.title = "E-Signature";
-    signBtn.type = "button";
-    signBtn.onclick = (e) => {
-      e.preventDefault();
-      setShowSignature(true);
-    };
+  //   const signBtn = document.createElement("button");
+  //   signBtn.className = "ql-signature";
+  //   signBtn.innerHTML = "✍️";
+  //   signBtn.title = "E-Signature";
+  //   signBtn.type = "button";
+  //   signBtn.onclick = (e) => {
+  //     e.preventDefault();
+  //     setShowSignature(true);
+  //   };
 
-    toolbar.appendChild(tableBtn);
-    toolbar.appendChild(signBtn);
-  };
+  //   toolbar.appendChild(tableBtn);
+  //   toolbar.appendChild(signBtn);
+  // };
 
   const addTooltips = () => {
     const tooltips: Record<string, string> = {
@@ -219,62 +219,62 @@ export default function Editor() {
     });
   };
 
-  const setupTableSelection = () => {
-    if (!editorRef.current) return;
+  // const setupTableSelection = () => {
+  //   if (!editorRef.current) return;
 
-    const handleMouseOver = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const table = target.closest("table");
+  //   const handleMouseOver = (e: Event) => {
+  //     const target = e.target as HTMLElement;
+  //     const table = target.closest("table");
 
-      if (table) {
-        const cells = table.querySelectorAll("td");
-        cells.forEach((cell) => {
-          (cell as HTMLElement).style.backgroundColor = "#e3f2fd";
-        });
-      }
-    };
+  //     if (table) {
+  //       const cells = table.querySelectorAll("td");
+  //       cells.forEach((cell) => {
+  //         (cell as HTMLElement).style.backgroundColor = "#e3f2fd";
+  //       });
+  //     }
+  //   };
 
-    const handleMouseOut = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const table = target.closest("table");
+    // const handleMouseOut = (e: Event) => {
+    //   const target = e.target as HTMLElement;
+    //   const table = target.closest("table");
 
-      if (table) {
-        const cells = table.querySelectorAll("td");
-        cells.forEach((cell) => {
-          (cell as HTMLElement).style.backgroundColor = "";
-        });
-      }
-    };
+    //   if (table) {
+    //     const cells = table.querySelectorAll("td");
+    //     cells.forEach((cell) => {
+    //       (cell as HTMLElement).style.backgroundColor = "";
+    //     });
+    //   }
+    // };
 
-    const handleClick = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const table = target.closest("table");
+    // const handleClick = (e: Event) => {
+    //   const target = e.target as HTMLElement;
+    //   const table = target.closest("table");
 
-      if (table && (e as MouseEvent).ctrlKey) {
-        e.preventDefault();
-        selectTable(table);
-      }
-    };
+    //   if (table && (e as MouseEvent).ctrlKey) {
+    //     e.preventDefault();
+    //     selectTable(table);
+    //   }
+    // };
 
-    editorRef.current.addEventListener("mouseover", handleMouseOver);
-    editorRef.current.addEventListener("mouseout", handleMouseOut);
-    editorRef.current.addEventListener("click", handleClick);
-  };
+    // editorRef.current.addEventListener("mouseover", handleMouseOver);
+    // editorRef.current.addEventListener("mouseout", handleMouseOut);
+    // editorRef.current.addEventListener("click", handleClick);
+  // };
 
-  const selectTable = (table: HTMLElement) => {
-    const cells = table.querySelectorAll("td");
-    cells.forEach((cell) => {
-      (cell as HTMLElement).style.backgroundColor = "#2196f3";
-      (cell as HTMLElement).style.color = "#ffffff";
-    });
+  // const selectTable = (table: HTMLElement) => {
+  //   const cells = table.querySelectorAll("td");
+  //   cells.forEach((cell) => {
+  //     (cell as HTMLElement).style.backgroundColor = "#2196f3";
+  //     (cell as HTMLElement).style.color = "#ffffff";
+  //   });
 
-    setTimeout(() => {
-      cells.forEach((cell) => {
-        (cell as HTMLElement).style.backgroundColor = "";
-        (cell as HTMLElement).style.color = "";
-      });
-    }, 300);
-  };
+  //   setTimeout(() => {
+  //     cells.forEach((cell) => {
+  //       (cell as HTMLElement).style.backgroundColor = "";
+  //       (cell as HTMLElement).style.color = "";
+  //     });
+  //   }, 300);
+  // };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -286,17 +286,17 @@ export default function Editor() {
         setShowSearch(false);
         clearSearch();
       }
-      if ((e.key === "Delete" || e.key === "Backspace") && document.activeElement?.closest("table")) {
-        const selection = quillRef.current?.getSelection();
-        if (selection) {
-          const [line] = quillRef.current.getLine(selection.index);
-          const table = line?.domNode?.closest("table");
-          if (table && e.ctrlKey) {
-            e.preventDefault();
-            table.remove();
-          }
-        }
-      }
+      // if ((e.key === "Delete" || e.key === "Backspace") && document.activeElement?.closest("table")) {
+      //   const selection = quillRef.current?.getSelection();
+      //   if (selection) {
+      //     const [line] = quillRef.current.getLine(selection.index);
+      //     const table = line?.domNode?.closest("table");
+      //     if (table && e.ctrlKey) {
+      //       e.preventDefault();
+      //       table.remove();
+      //     }
+      //   }
+      // }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -321,181 +321,181 @@ export default function Editor() {
     };
   }, []);
 
-  const setupTableContextMenu = () => {
-    if (!editorRef.current) return;
+  // const setupTableContextMenu = () => {
+  //   if (!editorRef.current) return;
 
-    const handleContextMenu = (e: Event) => {
-      const target = e.target as HTMLElement;
-      const cell = target.closest("td");
+  //   const handleContextMenu = (e: Event) => {
+  //     const target = e.target as HTMLElement;
+  //     const cell = target.closest("td");
 
-      if (cell) {
-        e.preventDefault();
-        showTableContextMenu(e as MouseEvent, cell);
-      }
-    };
+  //     if (cell) {
+  //       e.preventDefault();
+  //       showTableContextMenu(e as MouseEvent, cell);
+  //     }
+  //   };
 
-    editorRef.current.addEventListener("contextmenu", handleContextMenu);
-  };
+  //   editorRef.current.addEventListener("contextmenu", handleContextMenu);
+  // };
 
-  const showTableContextMenu = (e: MouseEvent, cell: HTMLElement) => {
-    const existingMenu = document.querySelector(".table-context-menu");
-    if (existingMenu) existingMenu.remove();
+  // const showTableContextMenu = (e: MouseEvent, cell: HTMLElement) => {
+  //   const existingMenu = document.querySelector(".table-context-menu");
+  //   if (existingMenu) existingMenu.remove();
 
-    const menu = document.createElement("div");
-    menu.className = "table-context-menu";
-    menu.style.left = `${e.pageX}px`;
-    menu.style.top = `${e.pageY}px`;
+  //   const menu = document.createElement("div");
+  //   menu.className = "table-context-menu";
+  //   menu.style.left = `${e.pageX}px`;
+  //   menu.style.top = `${e.pageY}px`;
 
-    const isNested = isTableNested(cell);
+  //   const isNested = isTableNested(cell);
 
-    const options = [
-      { label: "Insert Row Above", action: () => insertRow(cell, true) },
-      { label: "Insert Row Below", action: () => insertRow(cell, false) },
-      { label: "Insert Column Left", action: () => insertColumn(cell, true) },
-      { label: "Insert Column Right", action: () => insertColumn(cell, false) },
-      { label: "Delete Row", action: () => deleteRow(cell) },
-      { label: "Delete Column", action: () => deleteColumn(cell) },
-      { label: "Delete Table", action: () => deleteTable(cell) },
-    ];
+  //   const options = [
+  //     { label: "Insert Row Above", action: () => insertRow(cell, true) },
+  //     { label: "Insert Row Below", action: () => insertRow(cell, false) },
+  //     { label: "Insert Column Left", action: () => insertColumn(cell, true) },
+  //     { label: "Insert Column Right", action: () => insertColumn(cell, false) },
+  //     { label: "Delete Row", action: () => deleteRow(cell) },
+  //     { label: "Delete Column", action: () => deleteColumn(cell) },
+  //     { label: "Delete Table", action: () => deleteTable(cell) },
+  //   ];
 
-    if (!isNested) {
-      options.push({
-        label: "Insert Nested Table (2×2)",
-        action: () => insertNestedTable(cell),
-      });
-    }
+  //   if (!isNested) {
+  //     options.push({
+  //       label: "Insert Nested Table (2×2)",
+  //       action: () => insertNestedTable(cell),
+  //     });
+  //   }
 
-    options.forEach((option) => {
-      const btn = document.createElement("button");
-      btn.textContent = option.label;
+  //   options.forEach((option) => {
+  //     const btn = document.createElement("button");
+  //     btn.textContent = option.label;
 
-      btn.onclick = () => {
-        option.action();
-        menu.remove();
-      };
-      menu.appendChild(btn);
-    });
+  //     btn.onclick = () => {
+  //       option.action();
+  //       menu.remove();
+  //     };
+  //     menu.appendChild(btn);
+  //   });
 
-    document.body.appendChild(menu);
+  //   document.body.appendChild(menu);
 
-    const closeMenu = () => {
-      menu.remove();
-      document.removeEventListener("click", closeMenu);
-    };
-    setTimeout(() => document.addEventListener("click", closeMenu), 0);
-  };
+  //   const closeMenu = () => {
+  //     menu.remove();
+  //     document.removeEventListener("click", closeMenu);
+  //   };
+  //   setTimeout(() => document.addEventListener("click", closeMenu), 0);
+  // };
 
-  const isTableNested = (cell: HTMLElement): boolean => {
-    let parent = cell.parentElement;
-    let tableCount = 0;
+  // const isTableNested = (cell: HTMLElement): boolean => {
+  //   let parent = cell.parentElement;
+  //   let tableCount = 0;
 
-    while (parent && parent !== editorRef.current) {
-      if (parent.tagName === "TABLE") {
-        tableCount++;
-        if (tableCount > 1) return true;
-      }
-      parent = parent.parentElement;
-    }
+  //   while (parent && parent !== editorRef.current) {
+  //     if (parent.tagName === "TABLE") {
+  //       tableCount++;
+  //       if (tableCount > 1) return true;
+  //     }
+  //     parent = parent.parentElement;
+  //   }
 
-    return false;
-  };
+  //   return false;
+  // };
 
-  const insertNestedTable = (cell: HTMLElement) => {
-    const nestedTable = document.createElement("table");
-    nestedTable.style.width = "100%";
-    nestedTable.style.border = "1px solid #ddd";
+  // const insertNestedTable = (cell: HTMLElement) => {
+  //   const nestedTable = document.createElement("table");
+  //   nestedTable.style.width = "100%";
+  //   nestedTable.style.border = "1px solid #ddd";
 
-    for (let i = 0; i < 2; i++) {
-      const row = document.createElement("tr");
-      for (let j = 0; j < 2; j++) {
-        const td = document.createElement("td");
-        td.style.border = "1px solid #ddd";
-        td.style.padding = "4px";
-        td.innerHTML = "<br>";
-        row.appendChild(td);
-      }
-      nestedTable.appendChild(row);
-    }
+  //   for (let i = 0; i < 2; i++) {
+  //     const row = document.createElement("tr");
+  //     for (let j = 0; j < 2; j++) {
+  //       const td = document.createElement("td");
+  //       td.style.border = "1px solid #ddd";
+  //       td.style.padding = "4px";
+  //       td.innerHTML = "<br>";
+  //       row.appendChild(td);
+  //     }
+  //     nestedTable.appendChild(row);
+  //   }
 
-    cell.innerHTML = "";
-    cell.appendChild(nestedTable);
-  };
+  //   cell.innerHTML = "";
+  //   cell.appendChild(nestedTable);
+  // };
 
-  const insertRow = (cell: HTMLElement, above: boolean) => {
-    const row = cell.closest("tr");
-    if (!row) return;
+  // const insertRow = (cell: HTMLElement, above: boolean) => {
+  //   const row = cell.closest("tr");
+  //   if (!row) return;
 
-    const newRow = row.cloneNode(true) as HTMLElement;
-    newRow.querySelectorAll("td").forEach((td) => (td.innerHTML = "<br>"));
+  //   const newRow = row.cloneNode(true) as HTMLElement;
+  //   newRow.querySelectorAll("td").forEach((td) => (td.innerHTML = "<br>"));
 
-    if (above) {
-      row.parentNode?.insertBefore(newRow, row);
-    } else {
-      row.parentNode?.insertBefore(newRow, row.nextSibling);
-    }
-  };
+  //   if (above) {
+  //     row.parentNode?.insertBefore(newRow, row);
+  //   } else {
+  //     row.parentNode?.insertBefore(newRow, row.nextSibling);
+  //   }
+  // };
 
-  const insertColumn = (cell: HTMLElement, left: boolean) => {
-    const table = cell.closest("table");
-    if (!table) return;
+  // const insertColumn = (cell: HTMLElement, left: boolean) => {
+  //   const table = cell.closest("table");
+  //   if (!table) return;
 
-    const cellIndex = Array.from(cell.parentElement!.children).indexOf(cell);
-    const rows = table.querySelectorAll("tr");
+  //   const cellIndex = Array.from(cell.parentElement!.children).indexOf(cell);
+  //   const rows = table.querySelectorAll("tr");
 
-    rows.forEach((row) => {
-      const newCell = document.createElement("td");
-      newCell.innerHTML = "<br>";
-      newCell.style.border = "1px solid #ddd";
-      newCell.style.padding = "4px";
-      const targetCell = row.children[cellIndex] as HTMLElement;
+  //   rows.forEach((row) => {
+  //     const newCell = document.createElement("td");
+  //     newCell.innerHTML = "<br>";
+  //     newCell.style.border = "1px solid #ddd";
+  //     newCell.style.padding = "4px";
+  //     const targetCell = row.children[cellIndex] as HTMLElement;
 
-      if (left) {
-        row.insertBefore(newCell, targetCell);
-      } else {
-        row.insertBefore(newCell, targetCell.nextSibling);
-      }
-    });
-  };
+  //     if (left) {
+  //       row.insertBefore(newCell, targetCell);
+  //     } else {
+  //       row.insertBefore(newCell, targetCell.nextSibling);
+  //     }
+  //   });
+  // };
 
-  const deleteRow = (cell: HTMLElement) => {
-    const row = cell.closest("tr");
-    const table = row?.closest("table");
-    if (!row || !table) return;
+  // const deleteRow = (cell: HTMLElement) => {
+  //   const row = cell.closest("tr");
+  //   const table = row?.closest("table");
+  //   if (!row || !table) return;
 
-    const rows = table.querySelectorAll("tr");
-    if (rows.length <= 1) {
-      table.remove();
-    } else {
-      row.remove();
-    }
-  };
+  //   const rows = table.querySelectorAll("tr");
+  //   if (rows.length <= 1) {
+  //     table.remove();
+  //   } else {
+  //     row.remove();
+  //   }
+  // };
 
-  const deleteColumn = (cell: HTMLElement) => {
-    const table = cell.closest("table");
-    if (!table) return;
+  // const deleteColumn = (cell: HTMLElement) => {
+  //   const table = cell.closest("table");
+  //   if (!table) return;
 
-    const cellIndex = Array.from(cell.parentElement!.children).indexOf(cell);
-    const rows = table.querySelectorAll("tr");
+  //   const cellIndex = Array.from(cell.parentElement!.children).indexOf(cell);
+  //   const rows = table.querySelectorAll("tr");
 
-    const firstRow = rows[0];
-    if (firstRow.children.length <= 1) {
-      table.remove();
-      return;
-    }
+  //   const firstRow = rows[0];
+  //   if (firstRow.children.length <= 1) {
+  //     table.remove();
+  //     return;
+  //   }
 
-    rows.forEach((row) => {
-      if (row.children[cellIndex]) {
-        row.children[cellIndex].remove();
-      }
-    });
-  };
+  //   rows.forEach((row) => {
+  //     if (row.children[cellIndex]) {
+  //       row.children[cellIndex].remove();
+  //     }
+  //   });
+  // };
 
-  const deleteTable = (cell: HTMLElement) => {
-    const table = cell.closest("table");
-    if (table) {
-      table.remove();
-    }
-  };
+  // const deleteTable = (cell: HTMLElement) => {
+  //   const table = cell.closest("table");
+  //   if (table) {
+  //     table.remove();
+  //   }
+  // };
 
   const handleSearch = () => {
     if (!searchTerm || !quillRef.current) return;
@@ -623,15 +623,15 @@ export default function Editor() {
     router.push("/home");
   };
 
-  const insertTable = () => {
-    if (!quillRef.current) return;
+  // const insertTable = () => {
+  //   if (!quillRef.current) return;
 
-    const tableModule = quillRef.current.getModule("table");
-    if (!tableModule) return;
+  //   const tableModule = quillRef.current.getModule("table");
+  //   if (!tableModule) return;
 
-    tableModule.insertTable(tableRows, tableCols);
-    setShowTablePicker(false);
-  };
+  //   tableModule.insertTable(tableRows, tableCols);
+  //   setShowTablePicker(false);
+  // };
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
