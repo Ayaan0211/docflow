@@ -163,6 +163,13 @@ export const rtc = {
       method: 'POST',
       body: JSON.stringify(answer),
     }),
+
+  leave: (documentId: string | number) => {
+    const url = `/api/documents/${documentId}/data/leave/`;
+    const blob = new Blob([], { type: "text/plain" });
+    navigator.sendBeacon(url, blob);
+    return;
+  }
 };
 
 export const api = { auth, documents, versions, rtc };

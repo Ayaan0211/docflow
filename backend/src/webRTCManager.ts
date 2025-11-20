@@ -170,5 +170,68 @@ function createPeer(documentId: number, userId: number, cb: (offer: any) => void
             }));
         }
     };
+}
 
+export function leaveRoom(documentId: number, userId: number) {
+    const room = rooms[documentId];
+    if (!room) return;
+    const peer = room.peers.find(p => p.userId === userId);
+    if (peer) {
+        try { 
+            peer.dataChannel?.close();
+        } catch {}
+        try {
+            peer.peer?.close();
+        } catch {}
+    }
+    room.peers = room.peers.filter(p => p.userId !== userId);
+    if (room.peers.length > 0) return;
+    const finalState = JSON.stringify(room.docState);
+    // grab old document that's saved
+    pool.query(`
+        SELECT content
+        FROM documents
+        WHERE document_id = $1
+        `, [documentId], (err, contentRow) => {
+            if (err) {
+                console.error("Error fetching on room closure for: ", documentId);
+                delete rooms[documentId];
+                console.log("Room deleted with document id: ", documentId);
+                return;
+            }
+            if (contentRow.rows.length === 0) {
+                console.error("Error fetching content last saved for: ", documentId);
+                delete rooms[documentId];
+                console.log("Room deleted with document id: ", documentId);
+                return;
+            }
+            const oldContent = contentRow.rows[0].content;
+            if (oldContent === finalState) {
+                delete rooms[documentId]
+                return;
+            }
+            // we save old content
+            pool.query(`
+                INSERT INTO document_versions(document_id, edited_by, content)
+                VALUES ($1, $2, $3)
+                `, [documentId, userId, oldContent], (err) => {
+                if (err) {
+                    console.error("Error inserting into version hisotry for: ", documentId);
+                    delete rooms[documentId];
+                    console.log("Room deleted with document id: ", documentId);
+                    return;
+                }
+                // save content from current session
+                pool.query(`
+                    UPDATE documents
+                    SET content = $1, last_modified = CURRENT_TIMESTAMP
+                    WHERE document_id = $2
+                    `, [finalState, documentId], (err) => {
+                    if (err) console.error("Error saving document: ", documentId);
+                    delete rooms[documentId];
+                    console.log("Room deleted with document id: ", documentId);
+                    return;
+                    });
+                });
+        });
 }

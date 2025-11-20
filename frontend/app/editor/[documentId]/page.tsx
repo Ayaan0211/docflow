@@ -310,13 +310,20 @@ export default function Editor() {
   }, [showSearch]);
 
   useEffect(() => {
-    const handleUnload = () => rtcRef.current?.leave();
+    const handleUnload = () => {
+      // close connection from client-side
+      rtcRef.current?.leave();
+      // send notifcation to backend to close connection and possibly save
+      rtc.leave(documentId);
+    }
     window.addEventListener(`beforeunload`, handleUnload);
+    window.addEventListener("unload", handleUnload);
     return () => {
       window.removeEventListener("beforeunload", handleUnload);
-      rtcRef.current?.leave();
+      window.removeEventListener("unload", handleUnload);
+      handleUnload();
     };
-  }, []);
+  }, [documentId]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -626,7 +633,6 @@ export default function Editor() {
   };
 
   const handleBackToDashboard = async () => {
-    await saveDocument();
     router.push("/home");
   };
 
