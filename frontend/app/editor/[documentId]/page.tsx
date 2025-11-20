@@ -131,9 +131,14 @@ export default function Editor() {
             return;
           }
           applyingRemote = true;
-          const curr = quillRef.current.getContents();
-          const newDoc = curr.compose(deltaOrSnapshot);
-          quillRef.current.setContents(newDoc, "api");
+          const quill = quillRef.current;
+          if (!quill) return;
+          const oldRange = quill.getSelection();
+          quill.updateContents(deltaOrSnapshot, "api");
+          if (oldRange) {
+            const newIndex = deltaOrSnapshot.transformPosition(oldRange.index);
+            quill.setSelection(newIndex, oldRange.length, "api");
+          }
           applyingRemote = false;
         });
         rtcRef.current.connect();
