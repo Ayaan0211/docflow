@@ -70,17 +70,11 @@ export class DocRTC {
                                 // this is the remote op from another use, we have to use OT against inflight + pending
                                 let incoming = new Delta(msg.delta);
                                 if (this.inflight) {
-                                    const incomingPrime = incoming.transform(this.inflight, true);
-                                    const inflightPrime = this.inflight.transform(incoming, false);
-                                    incoming = incomingPrime;
-                                    this.inflight = inflightPrime;
+                                    this.inflight = this.inflight.transform(incoming, true);
                                 }
 
                                 if (this.pending) {
-                                    const incomingPrime2 = incoming.transform(this.pending, true);
-                                    const pendingPrime = this.pending.transform(incoming, false);
-                                    incoming = incomingPrime2;
-                                    this.pending = pendingPrime;
+                                    this.pending = this.pending.transform(incoming, true);
                                 }
 
                                 this.serverVersion = msg.version;
