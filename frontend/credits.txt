@@ -6,3 +6,8 @@ Create Icon: https://www.flaticon.com/free-icon/new-document_4210025?term=create
 Viewable Icon: https://www.flaticon.com/free-icon/eye_2533656?term=eye&page=1&position=79&origin=search&related_id=2533656
 Settings Icon: https://www.flaticon.com/free-icon/setting_2040504?term=settings&page=1&position=1&origin=search&related_id=2040504
 Typing Animation: https://css-tricks.com/snippets/css/typewriter-effect/
+Blank Doc Icon: https://www.flaticon.com/free-icon/blank-page_4288123?term=blank+document&page=1&position=2&origin=search&related_id=4288123
+Resume Doc Icon: https://www.flaticon.com/free-icon/cv_2889666?term=resume&page=1&position=21&origin=search&related_id=2889666
+Meeting Notes Icon: https://www.flaticon.com/free-icon/wirte_10270677?term=notes&page=1&position=3&origin=search&related_id=10270677
+Letter Icon: https://www.flaticon.com/free-icon/cover-letter_16854289?term=cover+letter&page=1&position=10&origin=search&related_id=16854289
+Scrollbar Styling: https://css-tricks.com/custom-scrollbars-in-webkit/

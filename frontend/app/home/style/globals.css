@@ -14,7 +14,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: linear-gradient(-45deg, #1f2937, #111827, #0d0e12, #111827);
+    --background: #1a1a1a;;
     --foreground: #e5e7eb;
     --card-bg: #1a1a1a;
     --text-dark: #f9fafb;
@@ -31,18 +31,23 @@ html {
 }
 
 body {
+  min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
   font-family: Inter, Arial, Helvetica, sans-serif;
 }
 
 header {
-  background: var(--card-bg);
+  z-index: 50;
 }
 
 @media (prefers-color-scheme: dark) {
   header {
     background: var(--card-bg);
+  }
+  body {
+    background: linear-gradient(-45deg, #1f2937, #111827, #0d0e12, #111827);
+    background-attachment: fixed;
   }
 }
 
