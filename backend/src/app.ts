@@ -474,7 +474,7 @@ app.post(
     if (!req.file) return res.status(400).end("No file uploaded");
     const fileBuffer = req.file.buffer;
     const mimetype = req.file.mimetype;
-    const filename = req.file.filename;
+    const filename = req.file.originalname;
 
     extractQuillFromFile(fileBuffer, mimetype, filename, (err, delta) => {
       if (err) return res.status(500).json({ error: err.message });
