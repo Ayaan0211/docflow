@@ -11,3 +11,4 @@ Resume Doc Icon: https://www.flaticon.com/free-icon/cv_2889666?term=resume&page=
 Meeting Notes Icon: https://www.flaticon.com/free-icon/wirte_10270677?term=notes&page=1&position=3&origin=search&related_id=10270677
 Letter Icon: https://www.flaticon.com/free-icon/cover-letter_16854289?term=cover+letter&page=1&position=10&origin=search&related_id=16854289
 Scrollbar Styling: https://css-tricks.com/custom-scrollbars-in-webkit/
+Input Button Styling: https://tw-elements.com/docs/standard/forms/file-input/

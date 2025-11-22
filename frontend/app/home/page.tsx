@@ -10,6 +10,7 @@ import { templates } from "../templates";
 export default function Home() {
   const router = useRouter();
   const [username, setUsername] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   //Create document modal states
   const [showModal, setShowModal] = useState(false);
@@ -39,6 +40,7 @@ export default function Home() {
   //File upload states
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
 
   //Template States
   const [selectedTemplate, setSelectedTemplate] = useState("blank");
@@ -64,6 +66,7 @@ export default function Home() {
           return;
         }
         setUsername(session.username);
+        setUserEmail(session.email);
       } catch {
         router.push("/login");
       }
@@ -127,14 +130,19 @@ export default function Home() {
       return;
     }
 
+    setShowFileUpload(false);
+    setIsUploadingFile(true);
+    setSelectedFile(null);
+
     try {
       const response = await api.documents.upload(selectedFile);
       console.log("Document uploaded", response);
-      setShowFileUpload(false);
-      setSelectedFile(null);
       await fetchDocuments();
     } catch (error) {
       console.error("Error uploading document:", error);
+    } finally {
+      setIsUploadingFile(false);
+      showMessage("File successfully uploaded!")
     }
   };
 
@@ -164,6 +172,11 @@ export default function Home() {
 
   const handleShareDocument = async () => {
     if (shareEmail.trim() === "" || selectDocId === null) return;
+
+    if(shareEmail === userEmail) {
+      showMessage("You already have access to the document!");
+      return;
+    }
 
     try {
       await api.documents.share(selectDocId, shareEmail, sharePermission);
@@ -242,16 +255,19 @@ export default function Home() {
       {/* Create new document */}
       <div className="p-2">
         <div className="w-[85%] mx-auto mb-16">
+
           <h3 className="text-xl mt-8 mb-4">Create a new Document:</h3>
+
           <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 justify-items-center">
             {templatesList.map((template) => {
               const isSelected = selectedTemplate === template.id;
+              const isUploading = template.id === "fileUpload" && isUploadingFile;
               return (
                 <div
                   key={template.id}
-                  className={`create-new cursor-pointer border-2 rounded-xl px-8 py-6 hover:border-blue-500 transition-all w-full max-w-sm ${
-                    isSelected ? "border-blue-500" : "border-gray-300"
-                  }`}
+                  className={`create-new cursor-pointer border-2 rounded-xl px-8 py-6 hover:border-blue-500 transition-all w-full max-w-sm 
+                    ${isSelected ? "border-blue-500" : "border-gray-300"}
+                    ${isUploading ? "animate-rainbow-border pointer-events-none" : ""}`}
                   onClick={() => {
                     if (template.id === "fileUpload") {
                       setShowFileUpload(true);
@@ -261,19 +277,22 @@ export default function Home() {
                     }
                   }}
                 >
+
                   <div className="p-4 rounded-full bg-blue-500 mx-auto w-fit">
                     <Image
                       src={template.image}
                       alt={`${template.name} Preview`}
                       width={50}
                       height={50}
-                      className="object-cover"
+                      className={`object-cover ${isUploading ? "animate-pulse" : ""}`}
                     />
                   </div>
+
                   <p className="text-center font-medium">{template.name}</p>
                 </div>
               );
             })}
+
           </div>
         </div>
 
@@ -325,10 +344,17 @@ export default function Home() {
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-xl font-bold mb-4">Upload File</h2>
+
+              <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-2 mb-3">
+                <p className="text-sm">
+                  <strong>⚠️ Note:</strong> Only PDF files are supported. Formatting may not be fully preserved
+                </p>
+              </div>
+
               <input
                 type="file"
-                accept=".pdf, .docx, .doc, .txt"
-                className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+                accept=".pdf"
+                className="w-full rounded border file:cursor-pointer px-3 py-[0.32rem] file:-mx-3 file:me-3  file:border-e file:px-3"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -336,10 +362,6 @@ export default function Home() {
                   }
                 }}
               />
-
-              {selectedFile && (
-                <p>Selected: {selectedFile.name}</p>
-              )}
 
               <div className="flex justify-end mt-4">
                 <button className="mr-2" onClick={() => {
