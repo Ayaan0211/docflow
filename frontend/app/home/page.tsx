@@ -405,8 +405,8 @@ export default function Home() {
                   }
                 >
                   {/* Doc Info */}
-                  <div className="flex items-center gap-4 mb-4 max-w-[75%]">
-                    <div className="w-12 h-12 rounded-md flex items-center justify-center bg-gradient-to-r from-purple-600 to-blue-400">
+                  <div className="flex items-center gap-4 mb-4 pr-16">
+                    <div className="w-12 h-12 flex-shrink-0 font-bold rounded-md flex items-center justify-center bg-gradient-to-r from-purple-600 to-blue-400">
                       {doc.title.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex flex-col min-w-0">
