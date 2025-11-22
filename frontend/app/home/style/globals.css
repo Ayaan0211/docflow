@@ -14,7 +14,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: linear-gradient(-45deg, #1f2937, #111827, #0d0e12, #111827);
+    --background: #1a1a1a;;
     --foreground: #e5e7eb;
     --card-bg: #1a1a1a;
     --text-dark: #f9fafb;
@@ -31,18 +31,23 @@ html {
 }
 
 body {
+  min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
   font-family: Inter, Arial, Helvetica, sans-serif;
 }
 
 header {
-  background: var(--card-bg);
+  z-index: 50;
 }
 
 @media (prefers-color-scheme: dark) {
   header {
     background: var(--card-bg);
+  }
+  body {
+    background: linear-gradient(-45deg, #1f2937, #111827, #0d0e12, #111827);
+    background-attachment: fixed;
   }
 }
 
@@ -212,7 +217,7 @@ h1, h2 {
   opacity: 1;
 }
 
-/* Typewrite effect */
+/* Typewriter effect */
 .typewriter h1 {
   overflow: hidden;
   border-right: .15em solid orange;
@@ -234,4 +239,32 @@ h1, h2 {
 @keyframes blink-caret {
   from, to { border-color: transparent }
   50% { border-color: orange; }
+}
+
+/* Rainbow animation (AI generated) */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+@keyframes rainbow-border {
+  0% { border-color: #ef4444; }
+  16% { border-color: #f97316; }
+  33% { border-color: #eab308; }
+  50% { border-color: #22c55e; }
+  66% { border-color: #3b82f6; }
+  83% { border-color: #a855f7; }
+  100% { border-color: #ef4444; }
+}
+
+.animate-rainbow-border {
+  animation: rainbow-border 3s linear infinite;
 }

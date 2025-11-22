@@ -20,6 +20,7 @@ export interface User {
 export interface Session {
   isLoggedIn: boolean;
   username: string | null;
+  email: string | null;
 }
 
 export interface Document {
