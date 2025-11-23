@@ -16,6 +16,8 @@ import { RTCSessionDescription } from "@koush/wrtc";
 import multer from "multer";
 import { extractQuillFromFile } from "./openai";
 import path from "path";
+import Delta from 'quill-delta';
+import isEqual from "lodash.isequal";
 
 const PORT = 8080;
 const app = express();
@@ -1099,7 +1101,9 @@ app.patch(
                 .end("You don't have permission to edit this document");
             const oldDoc = JSON.stringify(docResult.rows[0].content);
             const newContent = JSON.stringify(content);
-            if (newContent !== oldDoc) {
+            const oldDelta = new Delta(docResult.rows[0].content).ops;
+            const newDelta = new Delta(content).ops;
+            if (!isEqual(oldDelta, newDelta)) {
               // save old version for version history
             pool.query(
               `

@@ -2,6 +2,7 @@ import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } from "@kous
 import Delta from 'quill-delta';
 import { pool } from './app';
 import { randomUUID } from "crypto";
+import isEqual from "lodash.isequal";
 
 (global as any).RTCPeerConnection = RTCPeerConnection;
 (global as any).RTCSessionDescription = RTCSessionDescription;
@@ -206,7 +207,9 @@ export function leaveRoom(documentId: number, userId: number) {
                 return;
             }
             const oldContent = contentRow.rows[0].content;
-            if (oldContent === finalState) {
+            const oldDelta = new Delta(oldContent).ops;
+            const newDelta = new Delta(room.docState).ops;
+            if (isEqual(oldDelta, newDelta)) {
                 delete rooms[documentId]
                 return;
             }
