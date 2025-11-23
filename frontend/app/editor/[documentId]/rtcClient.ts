@@ -2,7 +2,7 @@
 import { api } from "../../api";
 import Delta from 'quill-delta';
 
-type OnDeltaHandler = (delta: any, version?: number) => void;
+type OnDeltaHandler = (delta: any, isSnapshot: boolean, version?: number) => void;
 
 export class DocRTC {
     private pc: RTCPeerConnection | null = null;
@@ -51,7 +51,7 @@ export class DocRTC {
                                 this.serverVersion = msg.version ?? 0;
                                 this.pending = null;
                                 this.inflight = null;
-                                this.onDelta && this.onDelta(snapshot, this.serverVersion);
+                                this.onDelta && this.onDelta(snapshot, true, this.serverVersion);
                                 return;
                             }
                             if (msg.type === 'delta') {
@@ -84,7 +84,7 @@ export class DocRTC {
                                 }
 
                                 this.serverVersion = msg.version;
-                                this.onDelta?.(incoming, this.serverVersion);
+                                this.onDelta?.(incoming, false, this.serverVersion);
                             }
                         } catch (err) {
                             console.error("Invalid delta payload", err);

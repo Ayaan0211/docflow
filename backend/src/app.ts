@@ -690,6 +690,21 @@ app.post(
                           [version_content, docId],
                           (err, updatedDoc) => {
                             if (err) return res.status(500).end(err);
+                            if (WebRTCManager.rooms[docId]) {
+                              const parsed = version_content;
+                              const room = WebRTCManager.rooms[docId];
+                              room.docState = new Delta(parsed);
+                              room.ops = [];
+                              room.version = 0;
+                              for (const p of room.peers) {
+                                if (p.dataChannel?.readyState !== "open") continue;
+                                p.dataChannel.send(JSON.stringify({
+                                    type: 'snapshot',
+                                    content: room.docState,
+                                    version: 0
+                                }));
+                              }
+                            }
                             res.json({
                               document: updatedDoc.rows[0],
                             });
@@ -896,7 +911,8 @@ app.get(
                 const totalVersions = parseInt(totalRowsRow.rows[0].count);
                 pool.query(
                   `
-                SELECT version_id, edited_by, created_at
+                SELECT version_id, edited_by, created_at, ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY created_at ASC
+                ) AS version_number
                 FROM document_versions
                 WHERE document_id = $1
                 ORDER BY created_at DESC
@@ -957,32 +973,32 @@ app.get(
               return res
                 .status(403)
                 .end("You don't have permission to view this version");
-            pool.query(
-              `
-            SELECT *
-            FROM document_versions
-            WHERE version_id = $1 AND document_id = $2
-            `,
-              [versionId, docId],
-              (err, document) => {
-                if (err) return res.status(500).end(err);
-                if (document.rows.length === 0) {
-                  return res
-                    .status(404)
-                    .end(
-                      "Document with ID " +
-                        docId +
-                        " with version ID" +
-                        versionId +
-                        "does not exist."
-                    );
+              pool.query(
+                `
+              SELECT *, ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY created_at ASC) AS version_number
+              FROM document_versions
+              WHERE version_id = $1 AND document_id = $2
+              `,
+                [versionId, docId],
+                (err, document) => {
+                  if (err) return res.status(500).end(err);
+                  if (document.rows.length === 0) {
+                    return res
+                      .status(404)
+                      .end(
+                        "Document with ID " +
+                          docId +
+                          " with version ID" +
+                          versionId +
+                          "does not exist."
+                      );
+                  }
+                  res.json({
+                    document: document.rows[0],
+                  });
                 }
-                res.json({
-                  document: document.rows[0],
-                });
+              );
               }
-            );
-          }
         );
       }
     );
@@ -1430,6 +1446,7 @@ app.post(
   "/api/documents/:documentId/data/leave/",
   isAuthenticated,
   function (req: Request, res: Response, next: NextFunction) {
+    res.status(204).end();
     const docId = parseInt(req.params.documentId);
     pool.query(
       `
@@ -1439,9 +1456,14 @@ app.post(
     `,
       [req.email],
       (err, userIdRow) => {
-        if (err) return res.status(500).end(err);
-        if (userIdRow.rows.length === 0)
-          return res.status(401).end("Invalid session");
+        if (err) {
+          console.warn("Leave route: user lookup failed", err);
+          return;
+        };
+        if (userIdRow.rows.length === 0) {
+          console.warn("Leave route: user lookup failed");
+          return;
+        }
         const userId = userIdRow.rows[0].id;
         // Check ownership
         pool.query(
@@ -1453,11 +1475,13 @@ app.post(
         `,
           [docId, userId],
           (err, permsRow) => {
-            if (err) return res.status(500).end(err);
-            if (permsRow.rows.length === 0)
-              return res
-                .status(403)
-                .end("You do not have permission to access this document");
+            if (err) {
+               console.warn("Leave route: perms lookup failed", err);
+               return;
+            }
+            if (permsRow.rows.length === 0) {
+              console.warn("Leave route: perms lookup failed",);
+            }
             WebRTCManager.leaveRoom(docId, userId);
           }
         );

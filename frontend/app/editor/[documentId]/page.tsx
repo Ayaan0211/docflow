@@ -133,47 +133,60 @@ export default function Editor() {
       let queuedDeltas: any[] = [];
 
       if (!rtcRef.current && mounted) {
-        rtcRef.current = new DocRTC(Number(documentId), (deltaOrSnapshot, version) => {
-          if (!quillRef.current) return;
-          if (!snapshotApplied) {
-            snapshotApplied = true;
-            applyingRemote = true;
-            const currentCursorRange = quillRef.current.getSelection();
-            quillRef.current.setContents(deltaOrSnapshot, "api");
-            if (currentCursorRange) {
-              const transformedIndex = deltaOrSnapshot.transformPosition(currentCursorRange.index, true);
-              quillRef.current.setSelection(transformedIndex, 0, "api")
-            }
-            applyingRemote = false;
-            if (canEditRef.current) quillRef.current.enable();
-            for (const d of queuedDeltas) {
+        rtcRef.current = new DocRTC(
+          Number(documentId),
+          (deltaOrSnapshot, isSnapshot, version) => {
+            if (!quillRef.current) return;
+            if (isSnapshot) {
+              snapshotApplied = true;
               applyingRemote = true;
-              quillRef.current.updateContents(d, "api");
+              const currentCursorRange = quillRef.current.getSelection();
+              quillRef.current.setContents(deltaOrSnapshot, "api");
+              if (currentCursorRange) {
+                const transformedIndex = deltaOrSnapshot.transformPosition(
+                  currentCursorRange.index,
+                  true
+                );
+                quillRef.current.setSelection(transformedIndex, 0, "api");
+              }
+              applyingRemote = false;
+              if (canEditRef.current) quillRef.current.enable();
+              for (const d of queuedDeltas) {
+                applyingRemote = true;
+                quillRef.current.updateContents(d, "api");
+                applyingRemote = false;
+              }
+              queuedDeltas = [];
+              return;
+            }
+            if (!isSnapshot) {
+              applyingRemote = true;
+              const quill = quillRef.current;
+              if (!quill) return;
+              const oldRange = quill.getSelection();
+              quill.updateContents(deltaOrSnapshot, "api");
+              if (oldRange) {
+                const newIndex = deltaOrSnapshot.transformPosition(
+                  oldRange.index
+                );
+                quill.setSelection(newIndex, oldRange.length, "api");
+              }
               applyingRemote = false;
             }
-            queuedDeltas = [];
-            return;
           }
-          applyingRemote = true;
-          const quill = quillRef.current;
-          if (!quill) return;
-          const oldRange = quill.getSelection();
-          quill.updateContents(deltaOrSnapshot, "api");
-          if (oldRange) {
-            const newIndex = deltaOrSnapshot.transformPosition(oldRange.index);
-            quill.setSelection(newIndex, oldRange.length, "api");
-          }
-          applyingRemote = false;
-        });
+        );
         rtcRef.current.connect();
       }
 
-      quillRef.current.on("text-change", (delta: any, oldDelta: any, source: string) => {
-        if (!snapshotApplied) return;
-        if (source === "user" && !applyingRemote) {
-          rtcRef.current?.sendDelta(delta);
+      quillRef.current.on(
+        "text-change",
+        (delta: any, oldDelta: any, source: string) => {
+          if (!snapshotApplied) return;
+          if (source === "user" && !applyingRemote) {
+            rtcRef.current?.sendDelta(delta);
+          }
         }
-      });
+      );
     };
 
     initQuill();
