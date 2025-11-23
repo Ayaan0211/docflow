@@ -15,6 +15,7 @@ import * as WebRTCManager from "./webRTCManager";
 import { RTCSessionDescription } from "@koush/wrtc";
 import multer from "multer";
 import { extractQuillFromFile } from "./openai";
+import path from "path";
 
 const PORT = 8080;
 const app = express();
@@ -475,6 +476,7 @@ app.post(
     const fileBuffer = req.file.buffer;
     const mimetype = req.file.mimetype;
     const filename = req.file.originalname;
+    const { name: cleanTitle } = path.parse(filename);
 
     extractQuillFromFile(fileBuffer, mimetype, filename, (err, delta) => {
       if (err) return res.status(500).json({ error: err.message });
@@ -496,7 +498,7 @@ app.post(
       VALUES ($1, $2, $3) 
       RETURNING document_id, title, content
       `,
-            [userId, filename, JSON.stringify(delta)],
+            [userId, cleanTitle, JSON.stringify(delta)],
             (err, result) => {
               if (err) return res.status(500).end(err);
               res.json({
