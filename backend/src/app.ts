@@ -1095,34 +1095,41 @@ app.patch(
               return res
                 .status(403)
                 .end("You don't have permission to edit this document");
-            const oldDoc = docResult.rows[0];
-            // save old version for version history
+            const oldDoc = JSON.stringify(docResult.rows[0].content);
+            const newContent = JSON.stringify(content);
+            if (newContent !== oldDoc) {
+              // save old version for version history
             pool.query(
               `
-            INSERT INTO document_versions(document_id, edited_by, content)
-            VALUES ($1, $2, $3)
-            `,
-              [docId, userId, JSON.stringify(oldDoc.content)],
-              (err) => {
-                if (err) return res.status(500).json({ error: err.message });
-                pool.query(
-                  `
-                UPDATE documents
-                SET content = $1, last_modified = CURRENT_TIMESTAMP
-                WHERE document_id = $2
-                RETURNING *
-                `,
-                  [JSON.stringify(content), docId],
-                  (err, document) => {
-                    if (err)
-                      return res.status(500).json({ error: err.message });
-                    return res.json({
-                      document: document.rows[0],
-                    });
-                  }
-                );
-              }
-            );
+              INSERT INTO document_versions(document_id, edited_by, content)
+              VALUES ($1, $2, $3)
+              `,
+                [docId, userId, oldDoc],
+                (err) => {
+                  if (err) return res.status(500).json({ error: err.message });
+                  pool.query(
+                    `
+                  UPDATE documents
+                  SET content = $1, last_modified = CURRENT_TIMESTAMP
+                  WHERE document_id = $2
+                  RETURNING *
+                  `,
+                    [newContent, docId],
+                    (err, document) => {
+                      if (err)
+                        return res.status(500).json({ error: err.message });
+                      return res.json({
+                        document: document.rows[0],
+                      });
+                    }
+                  );
+                }
+              );
+            } else {
+              return res.json({
+                        document: docResult.rows[0],
+                      });
+            }
           }
         );
       }
