@@ -3,8 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api, rtc } from "../../api";
 import "quill/dist/quill.snow.css";
+import "katex/dist/katex.min.css";
 import "./style/globals.css";
 import { DocRTC } from "./rtcClient";
+import EditorUI from "./EditorUI";
 
 export default function Editor() {
   const rtcRef = useRef<DocRTC | null>(null);
@@ -15,6 +17,7 @@ export default function Editor() {
   const router = useRouter();
   const documentId = params.documentId as string;
   const [isSaving, setIsSaving] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [title, setTitle] = useState("");
@@ -27,6 +30,8 @@ export default function Editor() {
   const [searchMatches, setSearchMatches] = useState<any[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
   const [showSignature, setShowSignature] = useState(false);
+  const [showMathEditor, setShowMathEditor] = useState(false);
+  const [mathLatex, setMathLatex] = useState("");
   const signatureCanvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const canEditRef = useRef<boolean>(false);
@@ -41,11 +46,17 @@ export default function Editor() {
     const initQuill = async () => {
       const QuillModule = (await import("quill")).default;
       const DeltaModule = (await import("quill-delta")).default;
+      
+      const katex = await import("katex");
+      (window as any).katex = katex.default;
 
       if (!mounted || !editorRef.current) return;
 
       const QuillTable = QuillModule.import("modules/table");
       QuillModule.register("modules/table", QuillTable);
+
+      const Formula = QuillModule.import("formats/formula");
+      QuillModule.register(Formula, true);
 
       const customBindings = {
         enterInTable: {
@@ -70,6 +81,7 @@ export default function Editor() {
         [{ align: [] }],
         ["blockquote", "code-block"],
         ["link", "image"],
+        ["formula"],
         ["clean"],
       ];
 
@@ -90,6 +102,7 @@ export default function Editor() {
           table: true,
         },
       });
+      
       await loadDocument();
 
       quillRef.current.disable();
@@ -171,8 +184,9 @@ export default function Editor() {
     
     const existingTable = toolbar.querySelector(".ql-table");
     const existingSign = toolbar.querySelector(".ql-signature");
+    const existingMath = toolbar.querySelector(".ql-math-editor");
     
-    if (existingTable || existingSign) return;
+    if (existingTable || existingSign || existingMath) return;
 
     const tableBtn = document.createElement("button");
     tableBtn.className = "ql-table";
@@ -194,8 +208,19 @@ export default function Editor() {
       setShowSignature(true);
     };
 
+    const mathBtn = document.createElement("button");
+    mathBtn.className = "ql-math-editor";
+    mathBtn.innerHTML = "∑";
+    mathBtn.title = "Math Editor";
+    mathBtn.type = "button";
+    mathBtn.onclick = (e) => {
+      e.preventDefault();
+      setShowMathEditor(true);
+    };
+
     toolbar.appendChild(tableBtn);
     toolbar.appendChild(signBtn);
+    toolbar.appendChild(mathBtn);
   };
 
   const addTooltips = () => {
@@ -210,6 +235,7 @@ export default function Editor() {
       ".ql-code-block": "Code Block",
       ".ql-link": "Insert Link",
       ".ql-image": "Insert Image",
+      ".ql-formula": "Insert Formula",
       ".ql-clean": "Clear Formatting",
       ".ql-header": "Heading",
       ".ql-size": "Font Size",
@@ -289,9 +315,16 @@ export default function Editor() {
         e.preventDefault();
         setShowSearch(true);
       }
+      if ((e.ctrlKey || e.metaKey) && e.key === "p") {
+        e.preventDefault();
+        handlePrint();
+      }
       if (e.key === "Escape" && showSearch) {
         setShowSearch(false);
         clearSearch();
+      }
+      if (e.key === "Escape" && showExportMenu) {
+        setShowExportMenu(false);
       }
       if ((e.key === "Delete" || e.key === "Backspace") && document.activeElement?.closest("table")) {
         const selection = quillRef.current?.getSelection();
@@ -307,13 +340,11 @@ export default function Editor() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showSearch]);
+  }, [showSearch, showExportMenu]);
 
   useEffect(() => {
     const handleUnload = () => {
-      // close connection from client-side
       rtcRef.current?.leave();
-      // send notifcation to backend to close connection and possibly save
       rtc.leave(documentId);
     }
     window.addEventListener(`beforeunload`, handleUnload);
@@ -334,6 +365,17 @@ export default function Editor() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (showExportMenu && !target.closest('.export-dropdown')) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showExportMenu]);
 
   const setupTableContextMenu = () => {
     if (!editorRef.current) return;
@@ -595,11 +637,143 @@ export default function Editor() {
     try {
       await api.documents.updateContent(documentId, content);
       setLastSaved(new Date());
-    } catch (error) {
+    }
+    catch (error) {
       console.log("Error Saving", error);
-    } finally {
+    } 
+    finally{
       setIsSaving(false);
     }
+  };
+
+  const handleExportPDF = async () => {
+    await saveDocument();
+    try {
+      const response = await fetch(`/api/documents/${documentId}/export/pdf`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) throw new Error('Export failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Failed to export PDF');
+    }
+  };
+
+  const handleExportDOCX = async () => {
+    await saveDocument();
+    try {
+      const response = await fetch(`/api/documents/${documentId}/export/docx`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) throw new Error('Export failed');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setShowExportMenu(false);
+    } catch (error) {
+      console.error('Error exporting DOCX:', error);
+      alert('Failed to export DOCX');
+    }
+  };
+
+  const handlePrint = () => {
+    if (!editorRef.current) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to print');
+      return;
+    }
+
+    const editorContent = editorRef.current.querySelector('.ql-editor');
+    if (!editorContent) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${title}</title>
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+          <style>
+            @page {
+              size: A4;
+              margin: 2.54cm;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #000;
+              margin: 0;
+              padding: 20px;
+            }
+            h1 {
+              text-align: center;
+              margin-bottom: 30px;
+              font-size: 24px;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+              margin: 10px 0;
+            }
+            td, th {
+              border: 1px solid #ddd;
+              padding: 8px;
+            }
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+            .ql-align-center {
+              text-align: center;
+            }
+            .ql-align-right {
+              text-align: right;
+            }
+            .ql-align-justify {
+              text-align: justify;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>${title}</h1>
+          ${editorContent.innerHTML}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   const handleUndo = () => {
@@ -646,6 +820,17 @@ export default function Editor() {
     setShowTablePicker(false);
   };
 
+  const insertMath = () => {
+    if (!quillRef.current || !mathLatex.trim()) return;
+
+    const range = quillRef.current.getSelection(true);
+    quillRef.current.insertEmbed(range.index, "formula", mathLatex);
+    quillRef.current.setSelection(range.index + 1);
+
+    setShowMathEditor(false);
+    setMathLatex("");
+  };
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDrawing(true);
     const canvas = signatureCanvasRef.current;
@@ -689,179 +874,84 @@ export default function Editor() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  const saveSignature = () => {
-    const canvas = signatureCanvasRef.current;
-    if (!canvas || !quillRef.current) return;
+const saveSignature = async () => {
+  const canvas = signatureCanvasRef.current;
+  if (!canvas || !quillRef.current) return;
 
-    const dataUrl = canvas.toDataURL("image/png");
-    const range = quillRef.current.getSelection(true);
-    quillRef.current.insertEmbed(range.index, "image", dataUrl);
 
-    setShowSignature(false);
-    clearSignature();
-  };
+  const dataUrl = canvas.toDataURL("image/png"); 
+
+  const quill = quillRef.current;
+  const sel = quill.getSelection(true);
+  const index = sel ? sel.index : quill.getLength();
+
+  quill.insertEmbed(index, "image", dataUrl, "user");
+  quill.setSelection(index + 1, 0, "user"); 
+
+  setShowSignature(false);
+  clearSignature();
+  try {
+    await saveDocument(); 
+    setLastSaved(new Date()); 
+  } catch (err) {
+    console.error("Error saving signature:", err);
+    alert("Failed to save signature");
+  }
+};
+
 
   return (
-    <div ref={containerRef} className={`flex flex-col ${isFullscreen ? "h-screen" : "min-h-screen"} bg-white`}>
-      <div className="header-dark flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          <button onClick={handleBackToDashboard} className="px-4 py-2 text-sm font-medium rounded-md">
-            ← Back
-          </button>
-          <button className="px-4 py-2 text-sm font-medium rounded-md disabled:opacity-50" onClick={saveDocument} disabled={isSaving}>
-            {isSaving ? "Saving..." : "💾 Save"}
-          </button>
-          {lastSaved && <p className="text-sm">{lastSaved.toLocaleTimeString()}</p>}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isEditingTitle ? (
-            <>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="px-3 py-1 text-lg font-semibold bg-black text-white border border-gray-600 rounded"
-                autoFocus
-              />
-              <button onClick={handleTitleSave} className="px-3 py-1 text-sm rounded">
-                Save
-              </button>
-              <button onClick={() => setIsEditingTitle(false)} className="px-3 py-1 text-sm rounded">
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <h1 className="text-lg font-semibold">{title}</h1>
-              <button onClick={() => setIsEditingTitle(true)} className="px-2 py-1 text-xs">
-                ✏️
-              </button>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button onClick={handleUndo} className="px-3 py-2 text-sm font-medium rounded-md" title="Undo (Ctrl+Z)">
-            ↶
-          </button>
-          <button onClick={handleRedo} className="px-3 py-2 text-sm font-medium rounded-md" title="Redo (Ctrl+Y)">
-            ↷
-          </button>
-          <button onClick={() => setShowSearch(!showSearch)} className="px-3 py-2 text-sm font-medium rounded-md" title="Find (Ctrl+F)">
-            🔍
-          </button>
-          <button onClick={toggleFullscreen} className="px-3 py-2 text-sm font-medium rounded-md">
-            {isFullscreen ? "⊗" : "⛶"}
-          </button>
-        </div>
-      </div>
-
-      {showSearch && (
-        <div className="header-dark flex items-center gap-3 px-6 py-3">
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="Search..."
-            className="px-3 py-1 bg-black text-white border border-gray-600 rounded"
-            autoFocus
-          />
-          <button onClick={handleSearch} className="px-3 py-1 text-sm rounded-md">
-            Search
-          </button>
-          <button onClick={prevMatch} className="px-2 py-1 text-sm rounded-md">
-            ↑
-          </button>
-          <button onClick={nextMatch} className="px-2 py-1 text-sm rounded-md">
-            ↓
-          </button>
-          <span className="text-sm">
-            {searchMatches.length > 0 ? `${currentMatchIndex + 1} of ${searchMatches.length}` : "No matches"}
-          </span>
-          <button
-            onClick={() => {
-              setShowSearch(false);
-              clearSearch();
-            }}
-            className="px-2 py-1 text-sm rounded-md"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-      {showTablePicker && (
-        <div className="header-dark flex items-center gap-3 px-6 py-3">
-          <span className="text-sm">Table Size:</span>
-          <input
-            type="number"
-            min="1"
-            max="5"
-            value={tableRows}
-            onChange={(e) => setTableRows(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))}
-            className="w-16 px-2 py-1 bg-black text-white border border-gray-600 rounded"
-            placeholder="Rows"
-          />
-          <span className="text-sm">×</span>
-          <input
-            type="number"
-            min="1"
-            max="5"
-            value={tableCols}
-            onChange={(e) => setTableCols(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))}
-            className="w-16 px-2 py-1 bg-black text-white border border-gray-600 rounded"
-            placeholder="Cols"
-          />
-          <button onClick={insertTable} className="px-3 py-1 text-sm rounded-md">
-            Insert
-          </button>
-          <button onClick={() => setShowTablePicker(false)} className="px-2 py-1 text-sm rounded-md">
-            ✕
-          </button>
-        </div>
-      )}
-
-      {showSignature && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl">
-            <h2 className="text-xl font-bold mb-4 text-black">E-Signature</h2>
-            <canvas
-              ref={signatureCanvasRef}
-              width={500}
-              height={200}
-              className="border-2 border-gray-300 bg-white cursor-crosshair"
-              onMouseDown={startDrawing}
-              onMouseMove={draw}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-            />
-            <div className="flex gap-3 mt-4">
-              <button onClick={clearSignature} className="px-4 py-2 bg-gray-500 text-white rounded-md">
-                Clear
-              </button>
-              <button onClick={saveSignature} className="px-4 py-2 bg-blue-600 text-white rounded-md">
-                Done
-              </button>
-              <button
-                onClick={() => {
-                  setShowSignature(false);
-                  clearSignature();
-                }}
-                className="px-4 py-2 bg-red-600 text-white rounded-md"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-auto p-6">
-        <div className="max-w-4xl mx-auto">
-          <div ref={editorRef} className="bg-white border rounded-lg shadow-sm min-h-[500px]" />
-        </div>
-      </div>
-    </div>
+    <EditorUI
+      containerRef={containerRef}
+      editorRef={editorRef}
+      signatureCanvasRef={signatureCanvasRef}
+      isFullscreen={isFullscreen}
+      isSaving={isSaving}
+      lastSaved={lastSaved}
+      showExportMenu={showExportMenu}
+      title={title}
+      isEditingTitle={isEditingTitle}
+      showSearch={showSearch}
+      searchTerm={searchTerm}
+      searchMatches={searchMatches}
+      currentMatchIndex={currentMatchIndex}
+      showTablePicker={showTablePicker}
+      tableRows={tableRows}
+      tableCols={tableCols}
+      showSignature={showSignature}
+      showMathEditor={showMathEditor}
+      mathLatex={mathLatex}
+      isDrawing={isDrawing}
+      setTitle={setTitle}
+      setIsEditingTitle={setIsEditingTitle}
+      setShowSearch={setShowSearch}
+      setSearchTerm={setSearchTerm}
+      setShowExportMenu={setShowExportMenu}
+      setShowTablePicker={setShowTablePicker}
+      setTableRows={setTableRows}
+      setTableCols={setTableCols}
+      setShowSignature={setShowSignature}
+      setShowMathEditor={setShowMathEditor}
+      setMathLatex={setMathLatex}
+      handleBackToDashboard={handleBackToDashboard}
+      saveDocument={saveDocument}
+      handleExportPDF={handleExportPDF}
+      handleExportDOCX={handleExportDOCX}
+      handlePrint={handlePrint}
+      handleTitleSave={handleTitleSave}
+      handleUndo={handleUndo}
+      handleRedo={handleRedo}
+      toggleFullscreen={toggleFullscreen}
+      handleSearch={handleSearch}
+      prevMatch={prevMatch}
+      nextMatch={nextMatch}
+      insertTable={insertTable}
+      insertMath={insertMath}
+      startDrawing={startDrawing}
+      draw={draw}
+      stopDrawing={stopDrawing}
+      clearSignature={clearSignature}
+      saveSignature={saveSignature}
+    />
   );
 }
