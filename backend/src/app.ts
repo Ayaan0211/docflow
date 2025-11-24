@@ -911,10 +911,12 @@ app.get(
                 const totalVersions = parseInt(totalRowsRow.rows[0].count);
                 pool.query(
                   `
-                SELECT version_id, edited_by, created_at, ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY created_at ASC
-                ) AS version_number
-                FROM document_versions
-                WHERE document_id = $1
+                SELECT *
+                FROM (
+                  SELECT version_id, edited_by, created_at, ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY created_at ASC) AS version_number
+                  FROM document_versions
+                  WHERE document_id = $1
+                ) AS t
                 ORDER BY created_at DESC
                 LIMIT $2 OFFSET $3
                 `,
@@ -975,9 +977,13 @@ app.get(
                 .end("You don't have permission to view this version");
               pool.query(
                 `
-              SELECT *, ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY created_at ASC) AS version_number
-              FROM document_versions
-              WHERE version_id = $1 AND document_id = $2
+              SELECT *
+              FROM (
+                SELECT *, ROW_NUMBER() OVER (PARTITION BY document_id ORDER BY created_at ASC) AS version_number
+                FROM document_versions
+                WHERE document_id = $2
+              ) AS t
+              WHERE version_id = $1
               `,
                 [versionId, docId],
                 (err, document) => {
