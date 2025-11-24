@@ -47,6 +47,7 @@ export default function Editor() {
       const QuillModule = (await import("quill")).default;
       const DeltaModule = (await import("quill-delta")).default;
       
+      // Dynamically import KaTeX
       const katex = await import("katex");
       (window as any).katex = katex.default;
 
@@ -55,8 +56,11 @@ export default function Editor() {
       const QuillTable = QuillModule.import("modules/table");
       QuillModule.register("modules/table", QuillTable);
 
+      // Register formula module for math equations
       const Formula = QuillModule.import("formats/formula");
-      QuillModule.register(Formula, true);
+      if (Formula) {
+        QuillModule.register("formats/formula", Formula);
+      }
 
       const customBindings = {
         enterInTable: {
@@ -637,17 +641,14 @@ export default function Editor() {
     try {
       await api.documents.updateContent(documentId, content);
       setLastSaved(new Date());
-    }
-    catch (error) {
+    } catch (error) {
       console.log("Error Saving", error);
-    } 
-    finally{
+    } finally {
       setIsSaving(false);
     }
   };
 
   const handleExportPDF = async () => {
-    await saveDocument();
     try {
       const response = await fetch(`/api/documents/${documentId}/export/pdf`, {
         credentials: 'include'
@@ -672,7 +673,6 @@ export default function Editor() {
   };
 
   const handleExportDOCX = async () => {
-    await saveDocument();
     try {
       const response = await fetch(`/api/documents/${documentId}/export/docx`, {
         credentials: 'include'
@@ -874,31 +874,17 @@ export default function Editor() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-const saveSignature = async () => {
-  const canvas = signatureCanvasRef.current;
-  if (!canvas || !quillRef.current) return;
+  const saveSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas || !quillRef.current) return;
 
+    const dataUrl = canvas.toDataURL("image/png");
+    const range = quillRef.current.getSelection(true);
+    quillRef.current.insertEmbed(range.index, "image", dataUrl);
 
-  const dataUrl = canvas.toDataURL("image/png"); 
-
-  const quill = quillRef.current;
-  const sel = quill.getSelection(true);
-  const index = sel ? sel.index : quill.getLength();
-
-  quill.insertEmbed(index, "image", dataUrl, "user");
-  quill.setSelection(index + 1, 0, "user"); 
-
-  setShowSignature(false);
-  clearSignature();
-  try {
-    await saveDocument(); 
-    setLastSaved(new Date()); 
-  } catch (err) {
-    console.error("Error saving signature:", err);
-    alert("Failed to save signature");
-  }
-};
-
+    setShowSignature(false);
+    clearSignature();
+  };
 
   return (
     <EditorUI
