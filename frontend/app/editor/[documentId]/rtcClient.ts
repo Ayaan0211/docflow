@@ -54,6 +54,7 @@ export class DocRTC {
                         try {
                             const msg = JSON.parse(e.data);
                             if (msg.type === 'cursor') {
+                                if (msg.sender === this.peerId) return;
                                 (this as any).onCursor?.(msg.sender, msg.index, msg.length, msg.name);
                                 return;
                             }

@@ -260,7 +260,7 @@ export default function Editor() {
       const bounds = quill.getBounds(index);
 
       let label = document.getElementById(`cursor-label-${peerId}`);
-      if (!label) {
+      if (!label && editorRef.current) {
         label = document.createElement("div");
         label.id = `cursor-label-${peerId}`;
         label.style.position = "absolute";
@@ -270,7 +270,8 @@ export default function Editor() {
         label.style.color = "white";
         label.style.pointerEvents = "none";
         label.style.zIndex = "9999";
-        document.body.appendChild(label);
+        label.style.transform = "translateY(-18px)";
+        editorRef.current.appendChild(label);
       }
 
       label.innerText = name;
