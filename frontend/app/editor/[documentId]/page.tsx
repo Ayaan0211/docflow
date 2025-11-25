@@ -113,7 +113,9 @@ export default function Editor() {
             userOnly: true,
           },
           table: true,
-          cursors: true,
+          cursors: {
+            hideDelayMs: 0,
+          },
         },
       });
       
@@ -166,14 +168,7 @@ export default function Editor() {
               applyingRemote = true;
               const quill = quillRef.current;
               if (!quill) return;
-              const oldRange = quill.getSelection();
               quill.updateContents(deltaOrSnapshot, "api");
-              if (oldRange) {
-                const newIndex = deltaOrSnapshot.transformPosition(
-                  oldRange.index
-                );
-                quill.setSelection(newIndex, oldRange.length, "api");
-              }
               applyingRemote = false;
             }
           }
