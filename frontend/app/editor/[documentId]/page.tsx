@@ -134,6 +134,7 @@ export default function Editor() {
       let applyingRemote = false;
       let snapshotApplied = false;
       let queuedDeltas: any[] = [];
+      const remoteCursorPositions: Record<string, { index: number, length: number }> = {};
 
       if (!rtcRef.current && mounted) {
         rtcRef.current = new DocRTC(
@@ -175,12 +176,22 @@ export default function Editor() {
                 );
                 quill.setSelection(newIndex, oldRange.length, "api");
               }
+              Object.entries(remoteCursorPositions).forEach(([peerId, pos]) => {
+                const newIndex = deltaOrSnapshot.transformPosition(pos.index);
+                remoteCursorPositions[peerId].index = newIndex;
+
+                const cursors = quillRef.current.getModule('cursors');
+                if (cursors?.cursors[peerId]) {
+                  cursors.moveCursor(peerId, { index: newIndex, length: pos.length });
+                }
+              });
               applyingRemote = false;
             }
           }
         );
         rtcRef.current.connect();
         rtcRef.current.setCursorHandler((peerId, index, length, name) => {
+          remoteCursorPositions[peerId] = { index, length };
           const cursors = quillRef.current.getModule('cursors');
           if (!cursors) return;
           const color = getColorForPeer(peerId);
