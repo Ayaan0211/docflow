@@ -873,17 +873,30 @@ export default function Editor() {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
-
-  const saveSignature = () => {
+  
+  const saveSignature = async () => {
     const canvas = signatureCanvasRef.current;
     if (!canvas || !quillRef.current) return;
-
     const dataUrl = canvas.toDataURL("image/png");
-    const range = quillRef.current.getSelection(true);
-    quillRef.current.insertEmbed(range.index, "image", dataUrl);
+
+    const quill = quillRef.current;
+    const sel = quill.getSelection(true);
+    const index = sel ? sel.index : quill.getLength();
+
+    quill.insertEmbed(index, "image", dataUrl, "user"); 
+    quill.setSelection(index + 1, 0, "user"); 
 
     setShowSignature(false);
     clearSignature();
+
+    
+    try{
+      await saveDocument(); 
+      setLastSaved(new Date()); 
+    } catch (err) {
+      console.error("Error saving signature:", err);
+      alert("Failed to save signature");
+    }
   };
 
   return (
