@@ -260,7 +260,8 @@ export default function Editor() {
       const bounds = quill.getBounds(index);
 
       let label = document.getElementById(`cursor-label-${peerId}`);
-      if (!label && editorRef.current) {
+      const editor = editorRef.current?.querySelector('.ql-editor');
+      if (!label && editor) {
         label = document.createElement("div");
         label.id = `cursor-label-${peerId}`;
         label.style.position = "absolute";
@@ -271,7 +272,7 @@ export default function Editor() {
         label.style.pointerEvents = "none";
         label.style.zIndex = "9999";
         label.style.transform = "translateY(-18px)";
-        editorRef.current.appendChild(label);
+        editor.appendChild(label);
       }
       if (!label) return;
       label.innerText = name;
@@ -286,7 +287,8 @@ export default function Editor() {
     const bounds = quill.getBounds(index);
 
     let caret = document.getElementById(`caret-${peerId}`);
-    if (!caret) {
+    const editor = editorRef.current?.querySelector('.ql-editor');
+    if (!caret && editor) {
       caret = document.createElement("div");
       caret.id = `caret-${peerId}`;
       caret.style.position = "absolute";
@@ -294,9 +296,9 @@ export default function Editor() {
       caret.style.borderRadius = "1px";
       caret.style.pointerEvents = "none";
       caret.style.zIndex = "9999";
-      document.body.appendChild(caret);
+      editor.appendChild(caret);
     }
-
+    if (!caret) return;
     caret.style.height = `${bounds.height}px`;
     caret.style.left = `${bounds.left}px`;
     caret.style.top = `${bounds.top}px`;

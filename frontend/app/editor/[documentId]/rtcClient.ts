@@ -134,6 +134,8 @@ export class DocRTC {
         if (!this.inflight) {
             this.inflight = d;
             this.sendToServer(d);
+            const index = this.getCurrentCursorIndex();
+            this.sendCursor(index, 0);
             return;
         }
         this.pending = this.pending ? this.pending.compose(d) : d;
@@ -159,5 +161,10 @@ export class DocRTC {
             length
         };
         this.channel.send(JSON.stringify(payload));
+    }
+
+    private getCurrentCursorIndex(): number {
+        const selection = (window as any).quillRef?.current?.getSelection();
+        return selection ? selection.index : 0;
     }
 }
