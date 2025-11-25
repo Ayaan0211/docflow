@@ -54,6 +54,7 @@ export default function Editor() {
     const initQuill = async () => {
       const QuillModule = (await import("quill")).default;
       const DeltaModule = (await import("quill-delta")).default;
+      const QuillCursors = (await import("quill-cursors")).default;
       
       // Dynamically import KaTeX
       const katex = await import("katex");
@@ -112,6 +113,7 @@ export default function Editor() {
             userOnly: true,
           },
           table: true,
+          cursors: true,
         },
       });
       
@@ -178,14 +180,13 @@ export default function Editor() {
         );
         rtcRef.current.connect();
         rtcRef.current.setCursorHandler((peerId, index, length, name) => {
-          removeRemoteHighlight(peerId);
-          if (length === 0) {
-            renderCaret(peerId, index);
-            renderCursorLabel(peerId, name, index);
-          } else {
-            renderRemoteSelection(peerId, index, length);
-            renderCursorLabel(peerId, name, index);
+          const cursors = quillRef.current.getModule('cursors');
+          cursors.toggleBlinking(true);
+          const color = getColorForPeer(peerId);
+          if (!cursors.cursors[peerId]) {
+            cursors.createCursor(peerId, name, color);
           }
+          cursors.moveCursor(peerId, { index, length });
         });
       }
 
@@ -243,92 +244,6 @@ export default function Editor() {
       "#2EC4B6", "#E71D36"
     ];
     return colors[Math.floor(Math.random() * colors.length)];
-  }
-
-  function renderRemoteSelection(peerId: string, index: number, length: number) {
-    const quill = quillRef.current;
-    if (!quill) return;
-
-    if (remoteCursors[peerId]) {
-      quill.formatText(remoteCursors[peerId].index, remoteCursors[peerId].length, {
-        background: false
-      }, "silent");
-    }
-
-    remoteCursors[peerId] = { index, length };
-
-    quill.formatText(index, length, {
-      background: getColorForPeer(peerId)
-    }, "silent");
-  }
-
-  function renderCursorLabel(peerId: string, name: string, index: number) {
-    const quill = quillRef.current;
-    const bounds = quill.getBounds(index);
-
-    const editorEl = editorRef.current?.querySelector(".ql-editor") as HTMLElement;
-    const offsetTop = editorEl?.offsetTop ?? 0;
-    const offsetLeft = editorEl?.offsetLeft ?? 0;
-
-    let label = document.getElementById(`cursor-label-${peerId}`);
-    if (!label) {
-      label = document.createElement("div");
-      label.id = `cursor-label-${peerId}`;
-      label.style.position = "absolute";
-      label.style.padding = "2px 6px";
-      label.style.borderRadius = "4px";
-      label.style.fontSize = "12px";
-      label.style.color = "white";
-      label.style.pointerEvents = "none";
-      document.getElementById("cursor-overlay")?.appendChild(label);
-    }
-
-    label.innerText = name;
-    label.style.background = getColorForPeer(peerId);
-    label.style.left = `${bounds.left + offsetLeft}px`;
-    label.style.top = `${bounds.top + offsetTop - 20}px`; // slightly above caret
-  }
-
-  function renderCaret(peerId: string, index: number) {
-    removeCaret(peerId);
-
-    const quill = quillRef.current;
-    const bounds = quill.getBounds(index);
-
-    const editorEl = editorRef.current?.querySelector(".ql-editor") as HTMLElement;
-    const offsetTop = editorEl?.offsetTop ?? 0;
-    const offsetLeft = editorEl?.offsetLeft ?? 0;
-
-    const caret = document.createElement("div");
-    caret.id = `caret-${peerId}`;
-    caret.style.position = "absolute";
-    caret.style.width = "2px";
-    caret.style.height = `${bounds.height}px`;
-    caret.style.left = `${bounds.left + offsetLeft}px`;
-    caret.style.top = `${bounds.top + offsetTop}px`;
-    caret.style.background = getColorForPeer(peerId);
-
-    document.getElementById("cursor-overlay")?.appendChild(caret);
-  }
-
-  function removeCaret(peerId: string) {
-    const caret = document.getElementById(`caret-${peerId}`);
-    if (caret) caret.remove();
-
-    const label = document.getElementById(`cursor-label-${peerId}`);
-    if (label) label.remove();
-  }
-
-  function removeRemoteHighlight(peerId: string) {
-    const prev = remoteCursors[peerId];
-    if (!prev || !quillRef.current) return;
-
-    quillRef.current.formatText(
-      prev.index,
-      prev.length || 1,
-      { background: false },
-      "silent"
-    );
   }
 
   const addCustomToolbarButtons = () => {

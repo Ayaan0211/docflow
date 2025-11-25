@@ -580,21 +580,7 @@ export default function EditorUI({
             <div
               ref={editorRef}
               className="bg-white border rounded-lg shadow-sm min-h-[500px]"
-              style={{ position: "relative" }}
-            >
-              <div
-                id="cursor-overlay"
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  pointerEvents: "none",
-                  zIndex: 9999,
-                }}
-              />
-            </div>
+            />
             {/* Version Editor */}
             {selectedVersion && (
               <div className="mt-6 p-4 border-2 border-blue-500 rounded-lg bg-blue-100">
