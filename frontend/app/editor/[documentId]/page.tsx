@@ -267,8 +267,8 @@ export default function Editor() {
       const bounds = quill.getBounds(index);
 
       let label = document.getElementById(`cursor-label-${peerId}`);
-      const editor = editorRef.current?.querySelector('.ql-editor');
-      if (!label && editor) {
+      const overlay = document.getElementById("cursor-overlay");
+      if (!label && overlay) {
         label = document.createElement("div");
         label.id = `cursor-label-${peerId}`;
         label.style.position = "absolute";
@@ -279,7 +279,7 @@ export default function Editor() {
         label.style.pointerEvents = "none";
         label.style.zIndex = "9999";
         label.style.transform = "translateY(-18px)";
-        editor.appendChild(label);
+        overlay.appendChild(label);
       }
       if (!label) return;
       label.innerText = name;
@@ -294,8 +294,8 @@ export default function Editor() {
     const bounds = quill.getBounds(index);
 
     let caret = document.getElementById(`caret-${peerId}`);
-    const editor = editorRef.current?.querySelector('.ql-editor');
-    if (!caret && editor) {
+    const overlay = document.getElementById("cursor-overlay");
+    if (!caret && overlay) {
       caret = document.createElement("div");
       caret.id = `caret-${peerId}`;
       caret.style.position = "absolute";
@@ -303,7 +303,7 @@ export default function Editor() {
       caret.style.borderRadius = "1px";
       caret.style.pointerEvents = "none";
       caret.style.zIndex = "9999";
-      editor.appendChild(caret);
+      overlay.appendChild(caret);
     }
     if (!caret) return;
     caret.style.height = `${bounds.height}px`;
