@@ -148,10 +148,19 @@ function createPeer(documentId: number, userId: number, cb: (offer: any) => void
 
     channel.onmessage = (event: any) => {
         const msg = JSON.parse(event.data);
-        const { sender, delta, baseVersion } = msg;
         const room = rooms[documentId];
         if (!room) return;
-        
+        // cursor handling
+        if (msg.type === "cursor") {
+            for (const p of room.peers) {
+                if (p.peerId === msg.sender) continue;
+                if (p.dataChannel?.readyState !== "open") continue;
+                p.dataChannel.send(JSON.stringify(msg));
+            }
+            return;
+        }
+        // detla handling
+        const { sender, delta, baseVersion } = msg;
         let incoming = new Delta(delta);
         const start = Math.max(0, Math.min(baseVersion ?? 0, room.ops.length));
         for (let i = start; i < room.ops.length; i++) {

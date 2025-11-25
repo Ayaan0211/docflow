@@ -139,6 +139,15 @@ createUsersTable()
   );
 // Chain more tables above as needed
 
+function usernameToInitials(name: string) {
+  return name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+}
+
 app.use(express.json());
 app.set("trust proxy", 1);
 
@@ -822,7 +831,7 @@ app.get(
     const docId = parseInt(req.params.documentId);
     pool.query(
       `
-    SELECT id
+    SELECT id, name
     FROM users
     WHERE email = $1
     `,
@@ -832,6 +841,7 @@ app.get(
         if (userIdRow.rows.length === 0)
           return res.status(401).end("Invalid session");
         const userId = userIdRow.rows[0].id;
+        const name = userIdRow.rows[0].name;
         pool.query(
           `
         SELECT d.*, s.permission
@@ -852,6 +862,7 @@ app.get(
             res.json({
               document: doc,
               canEdit,
+              initials: usernameToInitials(name)
             });
           }
         );

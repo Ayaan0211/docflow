@@ -106,7 +106,7 @@ export const documents = {
     apiFetch<DocumentsResponse>(`/api/user/documents/?page=${page}&maxDocuments=${maxDocuments}`),
 
   getById: (documentId: string | number) =>
-    apiFetch<{ document: Document, canEdit: boolean }>(`/api/documents/${documentId}/`),
+    apiFetch<{ document: Document, canEdit: boolean, initials: string }>(`/api/documents/${documentId}/`),
 
   updateContent: (documentId: string | number, content: any) =>
     apiFetch<{ document: Document }>(`/api/documents/${documentId}/data/content/`, {

@@ -16,11 +16,18 @@ export class DocRTC {
     private pending: Delta | null = null;
     // op we've sent, awaiting ack
     private inflight: Delta | null = null;
+    private onCursor?: (peerId: string, index: number, length: number, name: string) => void;
+    private usernameInitials: string;
 
-    constructor(documentId: number, onDelta?: OnDeltaHandler) {
+    constructor(documentId: number, usernameIntials: string, onDelta?: OnDeltaHandler) {
         this.documentId = documentId;
         this.onDelta = onDelta;
         this.peerId = crypto.randomUUID();
+        this.usernameInitials = usernameIntials;
+    }
+
+    setCursorHandler(handler: (peerId: string, index: number, length: number, name: string) => void) {
+        this.onCursor = handler;
     }
 
     connect(): Promise<void> {
@@ -46,6 +53,10 @@ export class DocRTC {
                     channel.onmessage = (e) => {
                         try {
                             const msg = JSON.parse(e.data);
+                            if (msg.type === 'cursor') {
+                                (this as any).onCursor?.(msg.sender, msg.index, msg.length, msg.name);
+                                return;
+                            }
                             if (msg.type === 'snapshot') {
                                 const snapshot = new Delta(msg.content.ops);
                                 this.serverVersion = msg.version ?? 0;
@@ -133,6 +144,18 @@ export class DocRTC {
             sender: this.peerId,
             delta,
             baseVersion: this.serverVersion
+        };
+        this.channel.send(JSON.stringify(payload));
+    }
+
+    sendCursor(index: number, length: number) {
+        if (!this.channel || this.channel.readyState !== "open") return;
+        const payload = {
+            type: "cursor",
+            sender: this.peerId,
+            name: this.usernameInitials ?? "??",
+            index,
+            length
         };
         this.channel.send(JSON.stringify(payload));
     }

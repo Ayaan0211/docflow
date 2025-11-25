@@ -36,6 +36,7 @@ export default function Editor() {
   const [isDrawing, setIsDrawing] = useState(false);
   const canEditRef = useRef<boolean>(false);
   const toolbarAddedRef = useRef<boolean>(false);
+  const initials = useRef<string>("");
 
     // States for version tracking
   const [versionsList, setVersionsList] = useState<any[]>([]);
@@ -134,7 +135,7 @@ export default function Editor() {
 
       if (!rtcRef.current && mounted) {
         rtcRef.current = new DocRTC(
-          Number(documentId),
+          Number(documentId), initials.current,
           (deltaOrSnapshot, isSnapshot, version) => {
             if (!quillRef.current) return;
             if (isSnapshot) {
@@ -176,6 +177,15 @@ export default function Editor() {
           }
         );
         rtcRef.current.connect();
+        rtcRef.current.setCursorHandler((peerId, index, length, name) => {
+          if (length === 0) {
+            renderCaret(peerId, index);
+          } else {
+            removeCaret(peerId);
+            renderRemoteSelection(peerId, index, length);
+            renderCursorLabel(peerId, name, index);
+          }
+        });
       }
 
       quillRef.current.on(
@@ -185,6 +195,14 @@ export default function Editor() {
           if (source === "user" && !applyingRemote) {
             rtcRef.current?.sendDelta(delta);
           }
+        }
+      );
+
+      quillRef.current.on(
+        "selection-change", 
+        (range: { index: number; length: number } | null, oldRange: any, source: string) => {
+           if (source !== "user" || !range) return;
+           rtcRef.current?.sendCursor(range.index, range.length);
         }
       );
     };
@@ -199,6 +217,109 @@ export default function Editor() {
       }
     };
   }, []);
+
+  const remoteCursors: Record<string, any> = {};
+  const userColors: Record<string, string> = {};
+
+  function renderRemoteCursor(peerId: string, index: number, length: number) {
+    const quill = quillRef.current;
+    if (!quill) return;
+    if (remoteCursors[peerId] !== undefined) {
+        quill.formatText(remoteCursors[peerId].index, remoteCursors[peerId].length, {
+            background: false
+        }, "silent");
+    }
+    remoteCursors[peerId] = { index, length };
+    quill.formatText(index, length || 1, {
+        background: getColorForPeer(peerId)
+    }, "silent");
+  }
+
+  function getColorForPeer(peerId: string) {
+    if (!userColors[peerId]) {
+      userColors[peerId] = getRandomColor();
+    }
+    return userColors[peerId];
+  }
+
+  function getRandomColor() {
+    const colors = [
+      "#FF6B6B", "#5FAD56", "#4D9DE0",
+      "#F0C808", "#B86ADC", "#FF8C42",
+      "#2EC4B6", "#E71D36"
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  function renderRemoteSelection(peerId: string, index: number, length: number) {
+    const quill = quillRef.current;
+    if (!quill) return;
+
+    if (remoteCursors[peerId]) {
+      quill.formatText(remoteCursors[peerId].index, remoteCursors[peerId].length, {
+        background: false
+      }, "silent");
+    }
+
+    remoteCursors[peerId] = { index, length };
+
+    quill.formatText(index, length, {
+      background: getColorForPeer(peerId)
+    }, "silent");
+  }
+
+  function renderCursorLabel(peerId: string, name: string, index: number) {
+      const quill = quillRef.current;
+      const bounds = quill.getBounds(index);
+
+      let label = document.getElementById(`cursor-label-${peerId}`);
+      if (!label) {
+        label = document.createElement("div");
+        label.id = `cursor-label-${peerId}`;
+        label.style.position = "absolute";
+        label.style.padding = "2px 6px";
+        label.style.borderRadius = "4px";
+        label.style.fontSize = "12px";
+        label.style.color = "white";
+        label.style.pointerEvents = "none";
+        label.style.zIndex = "9999";
+        document.body.appendChild(label);
+      }
+
+      label.innerText = name;
+      label.style.background = getColorForPeer(peerId);
+      label.style.left = `${bounds.left}px`;
+      label.style.top = `${bounds.top - 18}px`; // just above the cursor
+  }
+
+  function renderCaret(peerId: string, index: number) {
+    removeCaret(peerId);
+    const quill = quillRef.current;
+    const bounds = quill.getBounds(index);
+
+    let caret = document.getElementById(`caret-${peerId}`);
+    if (!caret) {
+      caret = document.createElement("div");
+      caret.id = `caret-${peerId}`;
+      caret.style.position = "absolute";
+      caret.style.width = "2px";
+      caret.style.borderRadius = "1px";
+      caret.style.pointerEvents = "none";
+      caret.style.zIndex = "9999";
+      document.body.appendChild(caret);
+    }
+
+    caret.style.height = `${bounds.height}px`;
+    caret.style.left = `${bounds.left}px`;
+    caret.style.top = `${bounds.top}px`;
+    caret.style.background = getColorForPeer(peerId);
+  }
+
+  function removeCaret(peerId: string) {
+    const el = document.getElementById(`cursor-label-${peerId}`);
+    if (el) el.remove();
+  }
+
 
   const addCustomToolbarButtons = () => {
     const toolbars = document.querySelectorAll(".ql-toolbar");
@@ -649,6 +770,7 @@ export default function Editor() {
       }
       quillRef.current.disable();
       canEditRef.current = response.canEdit;
+      initials.current = response.initials;
     } catch (error) {
       console.error("Error loading document:", error);
     }
