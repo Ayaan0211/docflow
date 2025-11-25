@@ -196,6 +196,10 @@ export default function Editor() {
           if (source === "user" && !applyingRemote) {
             rtcRef.current?.sendDelta(delta);
           }
+          const range = quillRef.current.getSelection();
+          if (range) {
+            rtcRef.current?.sendCursor(range.index, range.length);
+          }
         }
       );
 
