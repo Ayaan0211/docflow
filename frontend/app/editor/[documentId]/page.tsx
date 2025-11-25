@@ -178,10 +178,11 @@ export default function Editor() {
         );
         rtcRef.current.connect();
         rtcRef.current.setCursorHandler((peerId, index, length, name) => {
+          removeRemoteHighlight(peerId);
           if (length === 0) {
             renderCaret(peerId, index);
+            renderCursorLabel(peerId, name, index);
           } else {
-            removeCaret(peerId);
             renderRemoteSelection(peerId, index, length);
             renderCursorLabel(peerId, name, index);
           }
@@ -220,20 +221,6 @@ export default function Editor() {
 
   const remoteCursors: Record<string, any> = {};
   const userColors: Record<string, string> = {};
-
-  function renderRemoteCursor(peerId: string, index: number, length: number) {
-    const quill = quillRef.current;
-    if (!quill) return;
-    if (remoteCursors[peerId] !== undefined) {
-        quill.formatText(remoteCursors[peerId].index, remoteCursors[peerId].length, {
-            background: false
-        }, "silent");
-    }
-    remoteCursors[peerId] = { index, length };
-    quill.formatText(index, length || 1, {
-        background: getColorForPeer(peerId)
-    }, "silent");
-  }
 
   function getColorForPeer(peerId: string) {
     if (!userColors[peerId]) {
@@ -316,10 +303,24 @@ export default function Editor() {
   }
 
   function removeCaret(peerId: string) {
-    const el = document.getElementById(`cursor-label-${peerId}`);
-    if (el) el.remove();
+    const caret = document.getElementById(`caret-${peerId}`);
+    if (caret) caret.remove();
+
+    const label = document.getElementById(`cursor-label-${peerId}`);
+    if (label) label.remove();
   }
 
+  function removeRemoteHighlight(peerId: string) {
+    const prev = remoteCursors[peerId];
+    if (!prev || !quillRef.current) return;
+
+    quillRef.current.formatText(
+      prev.index,
+      prev.length || 1,
+      { background: false },
+      "silent"
+    );
+  }
 
   const addCustomToolbarButtons = () => {
     const toolbars = document.querySelectorAll(".ql-toolbar");
