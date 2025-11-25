@@ -144,6 +144,15 @@ export default function Editor() {
               snapshotApplied = true;
               applyingRemote = true;
               quillRef.current.setContents(deltaOrSnapshot, "api");
+              const currentCursorRange = quillRef.current.getSelection();
+              quillRef.current.setContents(deltaOrSnapshot, "api");
+              if (currentCursorRange) {
+                const transformedIndex = deltaOrSnapshot.transformPosition(
+                  currentCursorRange.index,
+                  true
+                );
+                quillRef.current.setSelection(transformedIndex, 0, "api");
+              }
               applyingRemote = false;
               if (canEditRef.current) quillRef.current.enable();
               for (const d of queuedDeltas) {
@@ -157,8 +166,15 @@ export default function Editor() {
             if (!isSnapshot) {
               applyingRemote = true;
               const quill = quillRef.current;
+              const oldRange = quill.getSelection();
               if (!quill) return;
               quill.updateContents(deltaOrSnapshot, "api");
+              if (oldRange) {
+                const newIndex = deltaOrSnapshot.transformPosition(
+                  oldRange.index
+                );
+                quill.setSelection(newIndex, oldRange.length, "api");
+              }
               applyingRemote = false;
             }
           }
