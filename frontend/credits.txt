@@ -12,3 +12,5 @@ Meeting Notes Icon: https://www.flaticon.com/free-icon/wirte_10270677?term=notes
 Letter Icon: https://www.flaticon.com/free-icon/cover-letter_16854289?term=cover+letter&page=1&position=10&origin=search&related_id=16854289
 Scrollbar Styling: https://css-tricks.com/custom-scrollbars-in-webkit/
 Input Button Styling: https://tw-elements.com/docs/standard/forms/file-input/
+Unopened arrow: https://www.flaticon.com/free-icon/right-arrow_271228?term=next&page=1&position=8&origin=search&related_id=271228
+Close arrow: https://www.flaticon.com/free-icon/arrow-down-sign-to-navigate_32195?term=down&page=1&position=2&origin=search&related_id=32195

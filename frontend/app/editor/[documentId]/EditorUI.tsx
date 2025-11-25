@@ -355,9 +355,9 @@ export default function EditorUI({
             className="w-full flex items-center gap-4 my-4 !bg-gray-500"
             onClick={() => setShowVersions(!showVersions)}
           >
-            {" "}
+            
             <Image
-              src={showVersions ? "/to-down.png" : "/to-right.png"}
+              src={showVersions ? "/close.png" : "/unopened.png"}
               alt={showVersions ? "arrow-down" : "arrow-right"}
               width={25}
               height={25}
