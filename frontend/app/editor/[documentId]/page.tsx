@@ -963,15 +963,67 @@ export default function Editor() {
     setShowTablePicker(false);
   };
 
+    const renderFormulas = () => {
+    if (typeof window === "undefined") return;
+
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const katexLib = (window as any).katex;
+    if (!katexLib) return;
+
+    const nodes = editor.querySelectorAll(".ql-editor .ql-formula");
+    nodes.forEach((formulaNode) => {
+      const raw = formulaNode as HTMLElement;
+
+      if (raw.dataset.rendered === "true") return;
+
+      const latex = raw.getAttribute("data-value") || raw.textContent?.trim() || "";
+      if (!latex) return;
+      const wrapper = document.createElement("span");
+      wrapper.className = "katex-wrapper";
+      wrapper.style.position = "relative";
+      wrapper.style.display = "inline-block";
+
+      raw.style.opacity = "0";
+      raw.style.position = "absolute";
+      raw.style.left = "0";
+      raw.style.top = "0";
+
+      // Create a KaTeX output container
+      const rendered = document.createElement("span");
+      try {
+        katexLib.render(latex, rendered, {
+          throwOnError: false,
+          displayMode: true,
+        });
+      } catch {
+        rendered.textContent = latex;
+      }
+
+      // Insert wrapper
+      const parent = raw.parentElement;
+      if (!parent) return;
+
+      parent.insertBefore(wrapper, raw);
+      wrapper.appendChild(raw);
+      wrapper.appendChild(rendered);
+
+      raw.dataset.rendered = "true"; 
+    });
+  };
+
   const insertMath = () => {
-    if (!quillRef.current || !mathLatex.trim()) return;
+    const quill = quillRef.current;
+    if (!quill || !mathLatex.trim()) return;
 
-    const range = quillRef.current.getSelection(true);
-    quillRef.current.insertEmbed(range.index, "formula", mathLatex);
-    quillRef.current.setSelection(range.index + 1);
+    const range = quill.getSelection(true);
+    const index = range ? range.index : quill.getLength();
 
-    setShowMathEditor(false);
+    quill.insertEmbed(index, "formula", mathLatex.trim(), "user");
+    quill.setSelection(index + 1, 0);
     setMathLatex("");
+    setShowMathEditor(false);
   };
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
