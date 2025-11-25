@@ -273,11 +273,11 @@ export default function Editor() {
         label.style.transform = "translateY(-18px)";
         editorRef.current.appendChild(label);
       }
-
+      if (!label) return;
       label.innerText = name;
       label.style.background = getColorForPeer(peerId);
       label.style.left = `${bounds.left}px`;
-      label.style.top = `${bounds.top - 18}px`; // just above the cursor
+      label.style.top = `${bounds.top - 18}px`;
   }
 
   function renderCaret(peerId: string, index: number) {
