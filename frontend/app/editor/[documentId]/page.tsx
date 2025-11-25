@@ -266,6 +266,10 @@ export default function Editor() {
     const quill = quillRef.current;
     const bounds = quill.getBounds(index);
 
+    const editorEl = editorRef.current?.querySelector(".ql-editor") as HTMLElement;
+    const offsetTop = editorEl?.offsetTop ?? 0;
+    const offsetLeft = editorEl?.offsetLeft ?? 0;
+
     let label = document.getElementById(`cursor-label-${peerId}`);
     if (!label) {
       label = document.createElement("div");
@@ -276,14 +280,13 @@ export default function Editor() {
       label.style.fontSize = "12px";
       label.style.color = "white";
       label.style.pointerEvents = "none";
-      label.style.transform = "translateY(-20px)";
       document.getElementById("cursor-overlay")?.appendChild(label);
     }
 
     label.innerText = name;
     label.style.background = getColorForPeer(peerId);
-    label.style.left = `${bounds.left}px`;
-    label.style.top = `${bounds.top}px`;
+    label.style.left = `${bounds.left + offsetLeft}px`;
+    label.style.top = `${bounds.top + offsetTop - 20}px`; // slightly above caret
   }
 
   function renderCaret(peerId: string, index: number) {
@@ -292,13 +295,17 @@ export default function Editor() {
     const quill = quillRef.current;
     const bounds = quill.getBounds(index);
 
+    const editorEl = editorRef.current?.querySelector(".ql-editor") as HTMLElement;
+    const offsetTop = editorEl?.offsetTop ?? 0;
+    const offsetLeft = editorEl?.offsetLeft ?? 0;
+
     const caret = document.createElement("div");
     caret.id = `caret-${peerId}`;
     caret.style.position = "absolute";
     caret.style.width = "2px";
     caret.style.height = `${bounds.height}px`;
-    caret.style.left = `${bounds.left}px`;
-    caret.style.top = `${bounds.top}px`;
+    caret.style.left = `${bounds.left + offsetLeft}px`;
+    caret.style.top = `${bounds.top + offsetTop}px`;
     caret.style.background = getColorForPeer(peerId);
 
     document.getElementById("cursor-overlay")?.appendChild(caret);
