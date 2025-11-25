@@ -284,8 +284,13 @@ export default function Editor() {
       if (!label) return;
       label.innerText = name;
       label.style.background = getColorForPeer(peerId);
-      label.style.left = `${bounds.left}px`;
-      label.style.top = `${bounds.top - 18}px`;
+      
+      const editor = document.querySelector(".ql-editor") as HTMLElement;
+      const rect = editor.getBoundingClientRect();
+      const x = rect.left + bounds.left - editor.scrollLeft;
+      const y = rect.top + bounds.top - editor.scrollTop;
+      label.style.left = `${x}px`;
+      label.style.top = `${y - 20}px`;
   }
 
   function renderCaret(peerId: string, index: number) {
@@ -306,9 +311,13 @@ export default function Editor() {
       overlay.appendChild(caret);
     }
     if (!caret) return;
+    const editor = document.querySelector(".ql-editor") as HTMLElement;
+    const rect = editor.getBoundingClientRect();
+    const x = rect.left + bounds.left - editor.scrollLeft;
+    const y = rect.top + bounds.top - editor.scrollTop;
+    caret.style.left = `${x}px`;
+    caret.style.top = `${y}px`;
     caret.style.height = `${bounds.height}px`;
-    caret.style.left = `${bounds.left}px`;
-    caret.style.top = `${bounds.top}px`;
     caret.style.background = getColorForPeer(peerId);
   }
 

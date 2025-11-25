@@ -575,7 +575,7 @@ export default function EditorUI({
         )}
         {/* Editor Content Area */}
         <div className="flex-1 overflow-auto p-6">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto" style={{ position: "relative" }}>
             {/* Main Editor */}
             <div
               ref={editorRef}
