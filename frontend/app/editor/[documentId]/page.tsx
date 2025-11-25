@@ -37,6 +37,13 @@ export default function Editor() {
   const canEditRef = useRef<boolean>(false);
   const toolbarAddedRef = useRef<boolean>(false);
 
+    // States for version tracking
+  const [versionsList, setVersionsList] = useState<any[]>([]);
+  const [selectedVersion, setSelectedVersion] = useState<any | null>(null);
+  const [showVersions, setShowVersions] = useState(false);
+  const previewEditorRef = useRef<HTMLDivElement>(null);
+  const previewQuillRef = useRef<any>(null);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!editorRef.current || quillRef.current) return;
@@ -899,6 +906,85 @@ export default function Editor() {
     }
   };
 
+  const loadVersions = async () => {
+    try {
+      const response = await api.versions.getAll(documentId);
+      setVersionsList(response.versions || []);
+      console.log(response)
+    } catch (err) {
+      console.error("Failed to load versions", err);
+    }
+  };
+
+  const loadVersionContent = async (versionId: string | number) => {
+    try {
+      const response = await api.versions.getById(documentId, versionId);
+      setSelectedVersion(response);
+    } catch (err) {
+      console.error("Failed to load version content", err);
+    }
+  };
+
+  const restoreVersion = async (versionId: string | number) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to restore this version? The current contents will be overwritten"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await api.versions.restore(documentId, versionId);
+
+      if (response.document.content) {
+        quillRef.current.setContents(response.document.content);
+      }
+
+      setSelectedVersion(null);
+      setShowVersions(false);
+
+      await loadVersions();
+    } catch (err) {
+      console.error("Failed to restore version", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedVersion) return;
+
+    const initPreview = async () => {
+      if (!previewEditorRef.current) return;
+
+      const QuillModule = (await import("quill")).default;
+
+      // Clean up existing preview editor
+      // if (previewQuillRef.current) {
+      //   previewQuillRef.current = null;
+      // }
+
+      // Clear and recreate the container
+      // previewEditorRef.current.innerHTML = "";
+      // const editorDiv = document.createElement("div");
+      // previewEditorRef.current.appendChild(editorDiv);
+
+      // Create read-only Quill instance
+      previewQuillRef.current = new QuillModule(previewEditorRef.current, {
+        theme: "snow",
+        readOnly: true,
+        modules: {
+          toolbar: false,
+        },
+      });
+
+      previewQuillRef.current.setContents(selectedVersion.document.content);
+    };
+
+    initPreview();
+  }, [selectedVersion]);
+
+  useEffect(() => {
+    loadVersions();
+  }, [documentId]);
+
   return (
     <EditorUI
       containerRef={containerRef}
@@ -951,6 +1037,16 @@ export default function Editor() {
       stopDrawing={stopDrawing}
       clearSignature={clearSignature}
       saveSignature={saveSignature}
+
+      //Versions
+  showVersions={showVersions}
+  versionsList={versionsList}
+  selectedVersion={selectedVersion}
+  previewEditorRef={previewEditorRef}
+  setShowVersions={setShowVersions}
+  loadVersionContent={loadVersionContent}
+  restoreVersion={restoreVersion}
+  setSelectedVersion={setSelectedVersion}
     />
   );
 }
