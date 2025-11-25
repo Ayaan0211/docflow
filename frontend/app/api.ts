@@ -61,6 +61,7 @@ export interface Version {
   edited_by: number;
   content: any;
   created_at: string;
+  version_number: number;
 }
 
 export interface VersionsResponse {
