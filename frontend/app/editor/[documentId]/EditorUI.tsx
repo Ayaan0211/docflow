@@ -577,24 +577,23 @@ export default function EditorUI({
         <div className="flex-1 overflow-auto p-6">
           <div className="max-w-4xl mx-auto">
             {/* Main Editor */}
-            <div 
-              ref={editorRef} 
+            <div
+              ref={editorRef}
               className="bg-white border rounded-lg shadow-sm min-h-[500px]"
+              style={{ position: "relative" }}
             >
-              <div className="ql-editor">
-                <div
-                  id="cursor-overlay"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    pointerEvents: "none",
-                    zIndex: 9999,
-                  }}
-                />
-              </div>
+              <div
+                id="cursor-overlay"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  pointerEvents: "none",
+                  zIndex: 9999,
+                }}
+              />
             </div>
             {/* Version Editor */}
             {selectedVersion && (
@@ -634,7 +633,6 @@ export default function EditorUI({
           font-size: 14px;
           background-color: white !important;
           padding: 2rem !important;
-          position: relative;
         }
 
         .ql-toolbar button {
