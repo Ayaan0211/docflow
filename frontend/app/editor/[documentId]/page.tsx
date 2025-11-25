@@ -53,8 +53,8 @@ export default function Editor() {
 
     const initQuill = async () => {
       const QuillModule = (await import("quill")).default;
-      const DeltaModule = (await import("quill-delta")).default;
       const QuillCursors = (await import("quill-cursors")).default;
+      QuillModule.register("modules/cursors", QuillCursors);
       
       // Dynamically import KaTeX
       const katex = await import("katex");
@@ -181,6 +181,7 @@ export default function Editor() {
         rtcRef.current.connect();
         rtcRef.current.setCursorHandler((peerId, index, length, name) => {
           const cursors = quillRef.current.getModule('cursors');
+          if (!cursors) return;
           cursors.toggleBlinking(true);
           const color = getColorForPeer(peerId);
           if (!cursors.cursors[peerId]) {
