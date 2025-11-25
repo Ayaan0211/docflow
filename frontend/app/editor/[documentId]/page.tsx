@@ -113,9 +113,7 @@ export default function Editor() {
             userOnly: true,
           },
           table: true,
-          cursors: {
-            hideDelayMs: 0,
-          },
+          cursors: true,
         },
       });
       
@@ -145,15 +143,7 @@ export default function Editor() {
             if (isSnapshot) {
               snapshotApplied = true;
               applyingRemote = true;
-              const currentCursorRange = quillRef.current.getSelection();
               quillRef.current.setContents(deltaOrSnapshot, "api");
-              if (currentCursorRange) {
-                const transformedIndex = deltaOrSnapshot.transformPosition(
-                  currentCursorRange.index,
-                  true
-                );
-                quillRef.current.setSelection(transformedIndex, 0, "api");
-              }
               applyingRemote = false;
               if (canEditRef.current) quillRef.current.enable();
               for (const d of queuedDeltas) {
