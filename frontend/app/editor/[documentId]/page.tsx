@@ -195,10 +195,11 @@ export default function Editor() {
           if (!snapshotApplied) return;
           if (source === "user" && !applyingRemote) {
             rtcRef.current?.sendDelta(delta);
-          }
-          const range = quillRef.current.getSelection();
-          if (range) {
-            rtcRef.current?.sendCursor(range.index, range.length);
+
+            const range = quillRef.current.getSelection();
+            if (range) {
+              rtcRef.current?.sendCursor(range.index, range.length);
+            }
           }
         }
       );
@@ -206,8 +207,10 @@ export default function Editor() {
       quillRef.current.on(
         "selection-change", 
         (range: { index: number; length: number } | null, oldRange: any, source: string) => {
-           if (source !== "user" || !range) return;
-           rtcRef.current?.sendCursor(range.index, range.length);
+          if (source !== "user") return;
+          if (!range) return;
+          if (applyingRemote) return;
+          rtcRef.current?.sendCursor(range.index, range.length);
         }
       );
     };
