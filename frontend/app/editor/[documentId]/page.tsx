@@ -182,7 +182,6 @@ export default function Editor() {
         rtcRef.current.setCursorHandler((peerId, index, length, name) => {
           const cursors = quillRef.current.getModule('cursors');
           if (!cursors) return;
-          cursors.toggleBlinking(true);
           const color = getColorForPeer(peerId);
           if (!cursors.cursors[peerId]) {
             cursors.createCursor(peerId, name, color);
