@@ -14,3 +14,5 @@ Scrollbar Styling: https://css-tricks.com/custom-scrollbars-in-webkit/
 Input Button Styling: https://tw-elements.com/docs/standard/forms/file-input/
 Unopened arrow: https://www.flaticon.com/free-icon/right-arrow_271228?term=next&page=1&position=8&origin=search&related_id=271228
 Close arrow: https://www.flaticon.com/free-icon/arrow-down-sign-to-navigate_32195?term=down&page=1&position=2&origin=search&related_id=32195
+Next icon: https://www.flaticon.com/free-icon/next_318275?term=next&page=1&position=2&origin=search&related_id=318275
+Previous icon: https://www.flaticon.com/free-icon/previous_318276?term=previous&page=1&position=3&origin=search&related_id=318276
