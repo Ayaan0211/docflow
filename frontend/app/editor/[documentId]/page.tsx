@@ -189,17 +189,21 @@ export default function Editor() {
         );
         rtcRef.current.connect();
         rtcRef.current.setCursorHandler((peerId, index, length, name) => {
-          remoteCursorPositions[peerId] = { index, length };
           const cursors = quillRef.current.getModule('cursors');
           if (!cursors) return;
           if (index === -1) {
             cursors.removeCursor(peerId);
+            delete remoteCursorPositions[peerId];
             return;
           }
+          
+          remoteCursorPositions[peerId] = { index, length };
           const color = getColorForPeer(peerId);
-          if (!cursors.cursors[peerId]) {
+          
+          if (!cursors.cursors || !cursors.cursors[peerId]) {
             cursors.createCursor(peerId, name, color);
           }
+          
           cursors.moveCursor(peerId, { index, length });
         });
       }
@@ -426,7 +430,10 @@ export default function Editor() {
 
   useEffect(() => {
     const handleUnload = () => {
-      rtcRef.current?.leave();
+      if (rtcRef.current) {
+        rtcRef.current.sendCursor(-1, 0);
+        rtcRef.current.leave();
+      }
       rtc.leave(documentId);
     }
     window.addEventListener(`beforeunload`, handleUnload);
