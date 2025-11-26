@@ -201,17 +201,6 @@ export default function Editor() {
           if (!snapshotApplied) return;
           if (source === "user" && !applyingRemote) {
             rtcRef.current?.sendDelta(delta);
-
-            Object.entries(remoteCursorPositions).forEach(([peerId, pos]) => {
-              const newIndex = delta.transformPosition(pos.index);
-              remoteCursorPositions[peerId].index = newIndex;
-
-              const cursors = quillRef.current.getModule("cursors");
-              if (cursors?.cursors[peerId]) {
-                cursors.moveCursor(peerId, { index: newIndex, length: pos.length });
-              }
-            });
-
             const range = quillRef.current.getSelection();
             if (range) {
               rtcRef.current?.sendCursor(range.index, range.length);
