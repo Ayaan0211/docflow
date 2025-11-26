@@ -219,6 +219,7 @@ export default function Editor() {
             const cursors = quillRef.current.getModule("cursors");
             if (cursors?.cursors[peerId]) {
               cursors.moveCursor(peerId, { index: newIndex, length: newLength });
+              cursors.update();
             }
           });
           }
