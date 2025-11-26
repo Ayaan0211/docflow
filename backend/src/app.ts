@@ -857,12 +857,13 @@ app.get(
                 .status(403)
                 .end("You do not have access to this document");
             const doc = result.rows[0];
-            const canEdit =
-              doc.owner_id === userId || doc.permission === "edit";
+            const canEdit = doc.owner_id === userId || doc.permission === "edit";
+            const isOwner = doc.owner_id === userId;
             res.json({
               document: doc,
               canEdit,
-              initials: usernameToInitials(name)
+              initials: usernameToInitials(name),
+              isOwner
             });
           }
         );
