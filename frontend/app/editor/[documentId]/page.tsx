@@ -204,23 +204,6 @@ export default function Editor() {
             if (range) {
               rtcRef.current?.sendCursor(range.index, range.length);
             }
-            delta.ops.forEach((op: any) => {
-              if (!op.insert) return;
-              const insertLength = typeof op.insert === "string" ? op.insert.length : 1;
-              const myIndex = range?.index ?? 0;
-
-              Object.entries(remoteCursorPositions).forEach(([peerId, pos]) => {
-                if (myIndex <= pos.index) {
-                  const newIndex = pos.index + insertLength;
-                  remoteCursorPositions[peerId].index = newIndex;
-
-                  const cursors = quillRef.current.getModule("cursors");
-                  if (cursors?.cursors[peerId]) {
-                    cursors.moveCursor(peerId, { index: newIndex, length: pos.length });
-                  }
-                }
-              });
-            });
           }
         }
       );
