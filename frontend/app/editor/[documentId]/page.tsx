@@ -205,6 +205,22 @@ export default function Editor() {
             if (range) {
               rtcRef.current?.sendCursor(range.index, range.length);
             }
+            const quill = quillRef.current;
+            const cursors = quill.getModule("cursors");
+            if (!cursors) return;
+
+          Object.entries(remoteCursorPositions).forEach(([peerId, pos]) => {
+            const newIndex = delta.transformPosition(pos.index, true);
+            const newEnd   = delta.transformPosition(pos.index + pos.length, true);
+            const newLength = newEnd - newIndex;
+
+            remoteCursorPositions[peerId] = { index: newIndex, length: newLength };
+
+            const cursors = quillRef.current.getModule("cursors");
+            if (cursors?.cursors[peerId]) {
+              cursors.moveCursor(peerId, { index: newIndex, length: newLength });
+            }
+          });
           }
         }
       );
@@ -231,7 +247,6 @@ export default function Editor() {
     };
   }, []);
 
-  const remoteCursors: Record<string, any> = {};
   const userColors: Record<string, string> = {};
 
   function getColorForPeer(peerId: string) {
