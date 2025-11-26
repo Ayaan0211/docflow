@@ -48,6 +48,10 @@ export default function Editor() {
   const previewQuillRef = useRef<any>(null);
 
   useEffect(() => {
+    document.title = `${title} - Editor`
+  })
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     if (!editorRef.current || quillRef.current) return;
 
