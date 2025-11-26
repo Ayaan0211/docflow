@@ -179,18 +179,6 @@ export default function Editor() {
               }
               applyingRemote = false;
             }
-            Object.entries(remoteCursorPositions).forEach(([peerId, pos]) => {
-              const newIndex = deltaOrSnapshot.transformPosition(pos.index, true);
-              const newEnd = deltaOrSnapshot.transformPosition(pos.index + pos.length, true);
-              const newLength = newEnd - newIndex;
-              
-              remoteCursorPositions[peerId] = { index: newIndex, length: newLength };
-
-              const cursors = quillRef.current.getModule("cursors");
-              if (cursors?.cursors[peerId]) {
-                cursors.moveCursor(peerId, { index: newIndex, length: newLength });
-              }
-            });
           }
         );
         rtcRef.current.connect();
@@ -216,23 +204,24 @@ export default function Editor() {
             if (range) {
               rtcRef.current?.sendCursor(range.index, range.length);
             }
-            const quill = quillRef.current;
-            const cursors = quill.getModule("cursors");
-            if (!cursors) return;
-          }
-          Object.entries(remoteCursorPositions).forEach(([peerId, pos]) => {
-          const newIndex = delta.transformPosition(pos.index, true);
-          const newEnd   = delta.transformPosition(pos.index + pos.length, true);
-          const newLength = newEnd - newIndex;
+            delta.ops.forEach((op: any) => {
+              if (!op.insert) return;
+              const insertLength = typeof op.insert === "string" ? op.insert.length : 1;
+              const myIndex = range?.index ?? 0;
 
-          remoteCursorPositions[peerId] = { index: newIndex, length: newLength };
+              Object.entries(remoteCursorPositions).forEach(([peerId, pos]) => {
+                if (myIndex <= pos.index) {
+                  const newIndex = pos.index + insertLength;
+                  remoteCursorPositions[peerId].index = newIndex;
 
-          const cursors = quillRef.current.getModule("cursors");
-          if (cursors?.cursors[peerId]) {
-            cursors.moveCursor(peerId, { index: newIndex, length: newLength });
-            cursors.update();
+                  const cursors = quillRef.current.getModule("cursors");
+                  if (cursors?.cursors[peerId]) {
+                    cursors.moveCursor(peerId, { index: newIndex, length: pos.length });
+                  }
+                }
+              });
+            });
           }
-        });
         }
       );
 
