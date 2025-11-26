@@ -403,7 +403,7 @@ export default function EditorUI({
               )}
 
               {selectedVersion && (
-                <div className="mt-4 pt-4 border-t border-gray-300">
+                <div className="mt-4 pt-4 px-4 border-t border-gray-300">
                   <button
                     className="w-full mb-2 !bg-green-600"
                     onClick={() =>
