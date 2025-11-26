@@ -61,6 +61,9 @@ interface EditorUIProps {
   restoreVersion: (versionId: string | number) => void;
   previewEditorRef: React.RefObject<HTMLDivElement | null>;
   setSelectedVersion: (version: any | null) => void;
+  page: number;
+  setPage: React.Dispatch<React.SetStateAction<number>>;
+  hasMore: boolean;
 }
 
 export default function EditorUI({
@@ -124,6 +127,9 @@ export default function EditorUI({
   loadVersionContent,
   restoreVersion,
   previewEditorRef,
+  page,
+  setPage,
+  hasMore,
 }: EditorUIProps) {
   return (
     <div
@@ -369,7 +375,7 @@ export default function EditorUI({
           {showVersions && (
             <div className="overflow-y-auto h-full">
               {versionsList.length === 0 ? (
-                <p>No Version to Display</p>
+                <p className="text-gray-500">No Version to Display</p>
               ) : (
                 <div className="space-y-2">
                   {versionsList.map((version, index) => (
@@ -387,11 +393,6 @@ export default function EditorUI({
                         <span className="text-black">
                           Version {version.version_number}
                         </span>
-                        {index === 0 && (
-                          <span className="text-sm p-1 bg-green-500 text-white rounded-lg">
-                            Latest
-                          </span>
-                        )}
                       </div>
                       <p className="text-xs text-gray-700 my-1">
                         {new Date(version.created_at).toLocaleString()}
@@ -419,6 +420,32 @@ export default function EditorUI({
                   </button>
                 </div>
               )}
+
+              {/* Next/Prev Buttons */}
+                        <div className="flex justify-center gap-4 mt-4">
+                          <button
+                            disabled={page === 1}
+                            className={`px-4 py-2 rounded !bg-gray-500 ${
+                              page === 1
+                                ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                                : "border border-white"
+                            }`}
+                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                          >
+                            <Image src="/previous.png" alt="Previous" width={25} height={25} />
+                          </button>
+                          <button
+                            disabled={!hasMore}
+                            className={`px-4 py-2 rounded !bg-gray-500 ${
+                              !hasMore
+                                ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                                : "border border-white"
+                            }`}
+                            onClick={() => setPage((prev) => prev + 1)}
+                          >
+                            <Image src="/next.png" alt="Next" width={25} height={25} />
+                          </button>
+                        </div>
             </div>
           )}
         </div>

@@ -42,6 +42,8 @@ export default function Editor() {
   const [versionsList, setVersionsList] = useState<any[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<any | null>(null);
   const [showVersions, setShowVersions] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const previewEditorRef = useRef<HTMLDivElement>(null);
   const previewQuillRef = useRef<any>(null);
 
@@ -1030,10 +1032,11 @@ export default function Editor() {
     }
   };
 
-  const loadVersions = async () => {
+  const loadVersions = async (page = 1) => {
     try {
-      const response = await api.versions.getAll(documentId);
+      const response = await api.versions.getAll(documentId, page, 5);
       setVersionsList(response.versions || []);
+      setHasMore(response.hasNext)
       console.log(response)
     } catch (err) {
       console.error("Failed to load versions", err);
@@ -1106,8 +1109,8 @@ export default function Editor() {
   }, [selectedVersion]);
 
   useEffect(() => {
-    loadVersions();
-  }, [documentId]);
+    loadVersions(page);
+  }, [page]);
 
   return (
     <EditorUI
@@ -1171,6 +1174,9 @@ export default function Editor() {
   loadVersionContent={loadVersionContent}
   restoreVersion={restoreVersion}
   setSelectedVersion={setSelectedVersion}
+    page={page}
+  setPage={setPage}
+  hasMore={hasMore}
     />
   );
 }

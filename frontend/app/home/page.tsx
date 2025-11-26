@@ -19,6 +19,10 @@ export default function Home() {
     []
   );
 
+  //Pages states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
   //More options modal states
   const [showOptionsModal, setShowOptionsModal] = useState(false);
 
@@ -36,6 +40,10 @@ export default function Home() {
   const [sharedUsers, setSharedUsers] = useState<
     DocumentSharesResponse["shared_users"]
   >([]);
+
+  //Users pages states
+  const [userPage, setUserPage] = useState(1);
+  const [userHasMore, setUserHasMore] = useState(true);
 
   //File upload states
   const [showFileUpload, setShowFileUpload] = useState(false);
@@ -89,18 +97,19 @@ export default function Home() {
     setTimeout(() => box.classList.remove("visible"), 3000);
   };
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = async (page = 1) => {
     try {
-      const response = await api.documents.getAll();
+      const response = await api.documents.getAll(page, 4);
       setDocuments(response.documents);
+      setHasMore(response.hasNext);
     } catch (error) {
       console.error("Error fetching documents:", error);
     }
   };
 
   useEffect(() => {
-    fetchDocuments();
-  }, []);
+    fetchDocuments(page);
+  }, [page]);
 
   const handleCreateDocument = async () => {
     if (docTitle.trim() === "") {
@@ -142,7 +151,7 @@ export default function Home() {
       console.error("Error uploading document:", error);
     } finally {
       setIsUploadingFile(false);
-      showMessage("File successfully uploaded!")
+      showMessage("File successfully uploaded!");
     }
   };
 
@@ -170,10 +179,20 @@ export default function Home() {
     }
   };
 
+  const loadSharedUsers = async (docId: number, page = 1) => {
+    try {
+      const response = await api.documents.getAllSharedUsers(docId, page, 3);
+      setSharedUsers(response.shared_users);
+      setUserHasMore(response.hasNext);
+    } catch (error) {
+      console.error("Error loading shared users:", error);
+    }
+  };
+
   const handleShareDocument = async () => {
     if (shareEmail.trim() === "" || selectDocId === null) return;
 
-    if(shareEmail === userEmail) {
+    if (shareEmail === userEmail) {
       showMessage("You already have access to the document!");
       return;
     }
@@ -183,8 +202,8 @@ export default function Home() {
       console.log("Document shared:", selectDocId);
       setShareEmail("");
       setSharePermission("view");
-      const response = await api.documents.getAllSharedUsers(selectDocId);
-      setSharedUsers(response.shared_users);
+      setUserPage(1);
+      await loadSharedUsers(selectDocId, 1);
       await fetchDocuments();
     } catch (error: any) {
       console.error("Error sharing document:", error);
@@ -197,6 +216,12 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    if (selectDocId !== null) {
+      loadSharedUsers(selectDocId, userPage);
+    }
+  }, [userPage, selectDocId]);
+
   const handleUpdatePermission = async (
     userEmail: string,
     newPermission: "view" | "edit"
@@ -205,10 +230,9 @@ export default function Home() {
       await api.documents.share(selectDocId!, userEmail, newPermission);
       console.log("Updated permission for", userEmail);
 
-      const response = await api.documents.getAllSharedUsers(selectDocId!);
-      setSharedUsers(response.shared_users);
+      await loadSharedUsers(selectDocId!, userPage);
     } catch (error) {
-      console.log("Error updating permission:", error);
+      console.error("Error updating permission:", error);
     }
   };
 
@@ -255,19 +279,23 @@ export default function Home() {
       {/* Create new document */}
       <div className="p-2">
         <div className="w-[85%] mx-auto mb-16">
-
           <h3 className="text-xl mt-8 mb-4">Create a new Document:</h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 justify-items-center">
             {templatesList.map((template) => {
               const isSelected = selectedTemplate === template.id;
-              const isUploading = template.id === "fileUpload" && isUploadingFile;
+              const isUploading =
+                template.id === "fileUpload" && isUploadingFile;
               return (
                 <div
                   key={template.id}
                   className={`create-new cursor-pointer border-2 rounded-xl px-8 py-6 hover:border-blue-500 transition-all w-full max-w-sm 
                     ${isSelected ? "border-blue-500" : "border-gray-300"}
-                    ${isUploading ? "animate-rainbow-border pointer-events-none" : ""}`}
+                    ${
+                      isUploading
+                        ? "animate-rainbow-border pointer-events-none"
+                        : ""
+                    }`}
                   onClick={() => {
                     if (template.id === "fileUpload") {
                       setShowFileUpload(true);
@@ -277,14 +305,15 @@ export default function Home() {
                     }
                   }}
                 >
-
                   <div className="p-4 rounded-full bg-blue-500 mx-auto w-fit">
                     <Image
                       src={template.image}
                       alt={`${template.name} Preview`}
                       width={50}
                       height={50}
-                      className={`object-cover ${isUploading ? "animate-pulse" : ""}`}
+                      className={`object-cover ${
+                        isUploading ? "animate-pulse" : ""
+                      }`}
                     />
                   </div>
 
@@ -292,7 +321,6 @@ export default function Home() {
                 </div>
               );
             })}
-
           </div>
         </div>
 
@@ -347,7 +375,8 @@ export default function Home() {
 
               <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-2 mb-3">
                 <p className="text-sm">
-                  <strong>⚠️ Note:</strong> Only PDF files are supported. Formatting may not be fully preserved
+                  <strong>⚠️ Note:</strong> Only PDF files are supported.
+                  Formatting may not be fully preserved
                 </p>
               </div>
 
@@ -358,16 +387,19 @@ export default function Home() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
-                    setSelectedFile(file)
+                    setSelectedFile(file);
                   }
                 }}
               />
 
               <div className="flex justify-end mt-4">
-                <button className="mr-2" onClick={() => {
-                  setShowFileUpload(false);
-                  setSelectedFile(null);
-                  }}>
+                <button
+                  className="mr-2"
+                  onClick={() => {
+                    setShowFileUpload(false);
+                    setSelectedFile(null);
+                  }}
+                >
                   Cancel
                 </button>
                 <button
@@ -458,18 +490,7 @@ export default function Home() {
                           setSelectDocId(doc.document_id);
                           setRenameTitle(doc.title);
                           setShowOptionsModal(true);
-
-                          //Fetch shared users
-                          try {
-                            const response =
-                              await api.documents.getAllSharedUsers(
-                                doc.document_id
-                              );
-                            setSharedUsers(response.shared_users);
-                          } catch (error) {
-                            console.log("Error fetching users", error);
-                            setSharedUsers([]);
-                          }
+                          await loadSharedUsers(doc.document_id, 1)
                         }}
                       >
                         <Image
@@ -620,11 +641,9 @@ export default function Home() {
                                         user.email
                                       );
 
-                                      const response =
-                                        await api.documents.getAllSharedUsers(
-                                          selectDocId
-                                        );
-                                      setSharedUsers(response.shared_users);
+                                      
+                                      await loadSharedUsers(selectDocId, userPage)
+                                      
                                     } catch (error) {
                                       console.log("Error removing user", error);
                                     }
@@ -641,6 +660,44 @@ export default function Home() {
                             </div>
                           ))
                         )}
+                      </div>
+
+                      {/* Next/Prev Buttons */}
+                      <div className="flex justify-center gap-4 mt-4">
+                        <button
+                          disabled={userPage === 1}
+                          className={`px-4 py-2 rounded !bg-gray-500 ${
+                            userPage === 1
+                              ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                              : "border border-white"
+                          }`}
+                          onClick={() =>
+                            setUserPage((prev) => Math.max(prev - 1, 1))
+                          }
+                        >
+                          <Image
+                            src="/previous.png"
+                            alt="Previous"
+                            width={15}
+                            height={15}
+                          />
+                        </button>
+                        <button
+                          disabled={!userHasMore}
+                          className={`px-4 py-2 rounded !bg-gray-500 ${
+                            !userHasMore
+                              ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                              : "border border-white"
+                          }`}
+                          onClick={() => setUserPage((prev) => prev + 1)}
+                        >
+                          <Image
+                            src="/next.png"
+                            alt="Next"
+                            width={15}
+                            height={15}
+                          />
+                        </button>
                       </div>
 
                       {/* Close Button */}
@@ -663,6 +720,37 @@ export default function Home() {
               )}
             </div>
           )}
+
+          {/* Next/Prev Buttons */}
+          <div className="flex justify-center gap-4 mt-4">
+            <button
+              disabled={page === 1}
+              className={`px-4 py-2 rounded !bg-gray-500 ${
+                page === 1
+                  ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                  : "border border-white"
+              }`}
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+            >
+              <Image
+                src="/previous.png"
+                alt="Previous"
+                width={25}
+                height={25}
+              />
+            </button>
+            <button
+              disabled={!hasMore}
+              className={`px-4 py-2 rounded !bg-gray-500 ${
+                !hasMore
+                  ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                  : "border border-white"
+              }`}
+              onClick={() => setPage((prev) => prev + 1)}
+            >
+              <Image src="/next.png" alt="Next" width={25} height={25} />
+            </button>
+          </div>
           <div />
         </div>
       </div>
