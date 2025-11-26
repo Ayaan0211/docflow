@@ -159,6 +159,14 @@ function createPeer(documentId: number, userId: number, cb: (offer: any) => void
             }
             return;
         }
+        if (msg.type === "leave") {
+            for (const p of room.peers) {
+                if (p.peerId === msg.sender) continue;
+                if (p.dataChannel?.readyState !== "open") continue;
+                p.dataChannel.send(JSON.stringify(msg));
+            }
+            return;
+        }
         // detla handling
         const { sender, delta, baseVersion } = msg;
         let incoming = new Delta(delta);

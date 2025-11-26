@@ -190,6 +190,10 @@ export default function Editor() {
           remoteCursorPositions[peerId] = { index, length };
           const cursors = quillRef.current.getModule('cursors');
           if (!cursors) return;
+          if (index === -1) {
+            cursors.removeCursor(peerId);
+            return;
+          }
           const color = getColorForPeer(peerId);
           if (!cursors.cursors[peerId]) {
             cursors.createCursor(peerId, name, color);

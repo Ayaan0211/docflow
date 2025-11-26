@@ -58,6 +58,10 @@ export class DocRTC {
                                 (this as any).onCursor?.(msg.sender, msg.index, msg.length, msg.name);
                                 return;
                             }
+                            if (msg.type === 'leave') {
+                                (this as any).onCursor?.(msg.sender, -1, 0, "");
+                                return;
+                            }
                             if (msg.type === 'snapshot') {
                                 const snapshot = new Delta(msg.content.ops);
                                 this.serverVersion = msg.version ?? 0;
@@ -118,6 +122,12 @@ export class DocRTC {
     }
 
     leave(): void {
+        if (this.channel && this.channel.readyState === "open") {
+            this.channel.send(JSON.stringify({
+                type: "leave",
+                sender: this.peerId
+            }));
+        }
         if (this.channel) {
             this.channel.close();
             this.channel = null;
