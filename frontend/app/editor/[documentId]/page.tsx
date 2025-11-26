@@ -37,8 +37,9 @@ export default function Editor() {
   const canEditRef = useRef<boolean>(false);
   const toolbarAddedRef = useRef<boolean>(false);
   const initials = useRef<string>("");
+  const [canEdit, setCanEdit] = useState(false)
 
-    // States for version tracking
+  //States for version tracking
   const [versionsList, setVersionsList] = useState<any[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<any | null>(null);
   const [showVersions, setShowVersions] = useState(false);
@@ -46,6 +47,7 @@ export default function Editor() {
   const [hasMore, setHasMore] = useState(true);
   const previewEditorRef = useRef<HTMLDivElement>(null);
   const previewQuillRef = useRef<any>(null);
+  const [owner, setIsOwner] = useState(false);
 
   useEffect(() => {
     document.title = `${title} - Editor`
@@ -698,7 +700,9 @@ export default function Editor() {
       const response = await api.documents.getById(documentId);
       if (!editorRef.current || !quillRef.current) return;
       setTitle(response.document.title);
-
+      console.log(response);
+      setIsOwner(response.isOwner);
+      setCanEdit(response.canEdit)
       if (!response.canEdit && quillRef.current) {
         const toolbars = document.querySelectorAll(".ql-toolbar");
         toolbars.forEach((toolbar) => toolbar.remove());
@@ -1105,8 +1109,9 @@ export default function Editor() {
   }, [selectedVersion]);
 
   useEffect(() => {
-    loadVersions(page);
-  }, [page]);
+    if (owner)
+      loadVersions(page);
+  }, [page, owner]);
 
   return (
     <EditorUI
@@ -1173,6 +1178,8 @@ export default function Editor() {
     page={page}
   setPage={setPage}
   hasMore={hasMore}
+  owner={owner}
+  canEdit={canEdit}
     />
   );
 }

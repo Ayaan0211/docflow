@@ -64,6 +64,8 @@ interface EditorUIProps {
   page: number;
   setPage: React.Dispatch<React.SetStateAction<number>>;
   hasMore: boolean;
+  owner: boolean;
+  canEdit: boolean;
 }
 
 export default function EditorUI({
@@ -130,6 +132,8 @@ export default function EditorUI({
   page,
   setPage,
   hasMore,
+  owner,
+  canEdit,
 }: EditorUIProps) {
   return (
     <div
@@ -147,13 +151,15 @@ export default function EditorUI({
           >
             ← Back
           </button>
-          <button
-            className="px-4 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md disabled:opacity-50 transition"
-            onClick={saveDocument}
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving..." : "💾 Save"}
-          </button>
+          {canEdit && (
+            <button
+              className="px-4 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md disabled:opacity-50 transition"
+              onClick={saveDocument}
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "💾 Save"}
+            </button>
+          )}
 
           {/* Export Dropdown */}
           <div className="relative export-dropdown">
@@ -221,31 +227,38 @@ export default function EditorUI({
           ) : (
             <>
               <h1 className="text-lg font-semibold">{title}</h1>
-              <button
-                onClick={() => setIsEditingTitle(true)}
-                className="px-2 py-1 text-xs hover:bg-gray-800 rounded transition"
-              >
-                ✏️
-              </button>
+              {canEdit && (
+                <button
+                  onClick={() => setIsEditingTitle(true)}
+                  className="px-2 py-1 text-xs hover:bg-gray-800 rounded transition"
+                >
+                  ✏️
+                </button>
+              )}
             </>
           )}
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleUndo}
-            className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
-            title="Undo (Ctrl+Z)"
-          >
-            ↶
-          </button>
-          <button
-            onClick={handleRedo}
-            className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
-            title="Redo (Ctrl+Y)"
-          >
-            ↷
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleUndo}
+              className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
+              title="Undo (Ctrl+Z)"
+            >
+              ↶
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={handleRedo}
+              className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
+              title="Redo (Ctrl+Y)"
+            >
+              ↷
+            </button>
+          )}
+
           <button
             onClick={() => setShowSearch(!showSearch)}
             className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
@@ -356,99 +369,106 @@ export default function EditorUI({
 
       <div className="flex flex-1">
         {/* Version Side Bar */}
-        <div className="w-56 p-4">
-          <button
-            className="w-full flex items-center gap-4 my-4 !bg-gray-500"
-            onClick={() => setShowVersions(!showVersions)}
-          >
-            
-            <Image
-              src={showVersions ? "/close.png" : "/unopened.png"}
-              alt={showVersions ? "arrow-down" : "arrow-right"}
-              width={25}
-              height={25}
-              className=""
-            />
-            <span>Versions</span>
-          </button>
+        {owner && (
+          <div className="w-56 p-4">
+            <button
+              className="w-full flex items-center gap-4 my-4 !bg-gray-500"
+              onClick={() => setShowVersions(!showVersions)}
+            >
+              <Image
+                src={showVersions ? "/close.png" : "/unopened.png"}
+                alt={showVersions ? "arrow-down" : "arrow-right"}
+                width={25}
+                height={25}
+                className=""
+              />
+              <span>Versions</span>
+            </button>
 
-          {showVersions && (
-            <div className="overflow-y-auto h-full">
-              {versionsList.length === 0 ? (
-                <p className="text-gray-500">No Version to Display</p>
-              ) : (
-                <div className="space-y-2">
-                  {versionsList.map((version, index) => (
-                    <div
-                      key={version.version_id}
-                      onClick={() => loadVersionContent(version.version_id)}
-                      className={`rounded-lg p-3 cursor-pointer border-1 ${
-                        selectedVersion?.document?.version_id ===
-                        version.version_id
-                          ? "bg-blue-100 border-blue-500 border-2"
-                          : "bg-gray-100 border-gray-500"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-black">
-                          Version {version.version_number}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-700 my-1">
-                        {new Date(version.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedVersion && (
-                <div className="mt-4 pt-4 px-4 border-t border-gray-300">
-                  <button
-                    className="w-full mb-2 !bg-green-600"
-                    onClick={() =>
-                      restoreVersion(selectedVersion.document?.version_id)
-                    }
-                  >
-                    Restore Version
-                  </button>
-                  <button
-                    className="w-full !bg-gray-300"
-                    onClick={() => setSelectedVersion(null)}
-                  >
-                    Close
-                  </button>
-                </div>
-              )}
-
-              {/* Next/Prev Buttons */}
-                        <div className="flex justify-center gap-4 mt-4">
-                          <button
-                            disabled={page === 1}
-                            className={`px-4 py-2 rounded !bg-gray-500 ${
-                              page === 1
-                                ? "opacity-40 !cursor-not-allowed !pointer-events-none"
-                                : "border border-white"
-                            }`}
-                            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-                          >
-                            <Image src="/previous.png" alt="Previous" width={25} height={25} />
-                          </button>
-                          <button
-                            disabled={!hasMore}
-                            className={`px-4 py-2 rounded !bg-gray-500 ${
-                              !hasMore
-                                ? "opacity-40 !cursor-not-allowed !pointer-events-none"
-                                : "border border-white"
-                            }`}
-                            onClick={() => setPage((prev) => prev + 1)}
-                          >
-                            <Image src="/next.png" alt="Next" width={25} height={25} />
-                          </button>
+            {showVersions && (
+              <div className="overflow-y-auto h-full">
+                {versionsList.length === 0 ? (
+                  <p className="text-gray-500">No Version to Display</p>
+                ) : (
+                  <div className="space-y-2">
+                    {versionsList.map((version, index) => (
+                      <div
+                        key={version.version_id}
+                        onClick={() => loadVersionContent(version.version_id)}
+                        className={`rounded-lg p-3 cursor-pointer border-1 ${
+                          selectedVersion?.document?.version_id ===
+                          version.version_id
+                            ? "bg-blue-100 border-blue-500 border-2"
+                            : "bg-gray-100 border-gray-500"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-black">
+                            Version {version.version_number}
+                          </span>
                         </div>
-            </div>
-          )}
-        </div>
+                        <p className="text-xs text-gray-700 my-1">
+                          {new Date(version.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedVersion && (
+                  <div className="mt-4 pt-4 px-4 border-t border-gray-300">
+                    <button
+                      className="w-full mb-2 !bg-green-600"
+                      onClick={() =>
+                        restoreVersion(selectedVersion.document?.version_id)
+                      }
+                    >
+                      Restore Version
+                    </button>
+                    <button
+                      className="w-full !bg-gray-300"
+                      onClick={() => setSelectedVersion(null)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                )}
+
+                {/* Next/Prev Buttons */}
+                <div className="flex justify-center gap-4 mt-4">
+                  <button
+                    disabled={page === 1}
+                    className={`px-4 py-2 rounded !bg-gray-500 ${
+                      page === 1
+                        ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                        : "border border-white"
+                    }`}
+                    onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  >
+                    <Image
+                      src="/previous.png"
+                      alt="Previous"
+                      width={25}
+                      height={25}
+                    />
+                  </button>
+                  <button
+                    disabled={!hasMore}
+                    className={`px-4 py-2 rounded !bg-gray-500 ${
+                      !hasMore
+                        ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                        : "border border-white"
+                    }`}
+                    onClick={() => setPage((prev) => prev + 1)}
+                  >
+                    <Image src="/next.png" alt="Next" width={25} height={25} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Math Editor Modal */}
         {showMathEditor && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
