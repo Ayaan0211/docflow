@@ -137,53 +137,26 @@ export default function EditorUI({
   owner,
   canEdit,
 }: EditorUIProps) {
-  // Avoid referencing `window` directly during render — read it inside effect/state
-  const [isEditorLoading, setIsEditorLoading] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return !!(window as any).isEditorLoading;
-    }
-    // default to true to avoid flash of content during hydration; the effect will update it on mount
-    return true;
-  });
+  const [isEditorLoading, setIsEditorLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsEditorLoading(!!(window as any).isEditorLoading);
-    }
+    // Automatically hide loading screen after 2 seconds
+    const timer = setTimeout(() => {
+      setIsEditorLoading(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <>
       {/* Beautiful Animated Loading Screen (2 seconds) */}
       {isEditorLoading && (
-        <div className="fixed inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 flex items-center justify-center z-[9999]">
-          <div className="text-center">
-            <div className="mb-8">
-              <div className="w-28 h-28 mx-auto bg-white rounded-3xl shadow-2xl flex items-center justify-center animate-bounce">
-                <svg
-                  className="w-16 h-16 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-              </div>
-            </div>
-            <h2 className="text-5xl font-bold text-white mb-4 animate-pulse">
-              Loading Editor...
-            </h2>
-            <p className="text-xl text-white text-opacity-90">
-              Preparing your document
-            </p>
-            <div className="mt-10 w-80 mx-auto bg-white bg-opacity-30 rounded-full h-4 overflow-hidden">
-              <div className="h-full bg-white rounded-full animate-progress"></div>
-            </div>
+        <div className="editor-loading-overlay">
+          <div className="editor-loading-content">
+            <div className="editor-loading-spinner"></div>
+            <h2 className="editor-loading-text">Loading Editor...</h2>
+            <p className="editor-loading-subtext">Preparing your document</p>
           </div>
         </div>
       )}
@@ -191,9 +164,11 @@ export default function EditorUI({
       {/* Main Editor UI — fades in after loading */}
       <div
         ref={containerRef}
-        className={`flex flex-col ${isFullscreen ? "h-screen" : "min-h-screen"} bg-gray-50 transition-opacity duration-700 ${
-          isEditorLoading ? "opacity-0" : "opacity-100"
-        }`}
+        className={`flex flex-col ${isFullscreen ? "h-screen" : "min-h-screen"} bg-gray-50`}
+        style={{
+          transition: 'opacity 700ms',
+          opacity: isEditorLoading ? 0 : 1
+        }}
       >
         {/* Header */}
         <div className="bg-gray-900 text-white flex items-center justify-between px-6 py-4 shadow-lg">
@@ -731,21 +706,6 @@ export default function EditorUI({
           @media print {
             .ql-toolbar {
               display: none !important;
-            }
-          }
-
-          /* Loading Animation */
-          .animate-progress {
-            width: 0%;
-            animation: progress 2s ease-out forwards;
-          }
-
-          @keyframes progress {
-            0% {
-              width: 0%;
-            }
-            100% {
-              width: 100%;
             }
           }
         `}</style>
