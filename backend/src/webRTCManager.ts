@@ -1,6 +1,6 @@
 import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate } from "@koush/wrtc";
 import Delta from 'quill-delta';
-import { pool } from './app';
+import { pool } from './db';
 import { randomUUID } from "crypto";
 import isEqual from "lodash.isequal";
 
