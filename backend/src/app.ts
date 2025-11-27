@@ -60,6 +60,8 @@ app.use("/api/documents", shareRoutes);
 
 export const server = createServer(app);
 
+server.setTimeout(120000);
+
 server.listen(PORT, () => {
   console.log(`✅ HTTP server running on http://localhost:${PORT}`);
 });

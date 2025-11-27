@@ -74,7 +74,10 @@ router.post(
     const { name: cleanTitle } = path.parse(filename);
 
     extractQuillFromFile(fileBuffer, mimetype, filename, (err, delta) => {
-      if (err) return res.status(500).json({ error: err.message });
+      if (err) {
+        console.error("OpenAI extraction error:", err);
+        return res.status(500).json({ error: err.message });
+      }
       pool.query(
         `
     SELECT id
