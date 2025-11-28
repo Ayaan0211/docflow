@@ -1174,19 +1174,19 @@ export default function Editor() {
       saveSignature={saveSignature}
 
       //Versions
-  showVersions={showVersions}
-  versionsList={versionsList}
-  selectedVersion={selectedVersion}
-  previewEditorRef={previewEditorRef}
-  setShowVersions={setShowVersions}
-  loadVersionContent={loadVersionContent}
-  restoreVersion={restoreVersion}
-  setSelectedVersion={setSelectedVersion}
-    page={page}
-  setPage={setPage}
-  hasMore={hasMore}
-  owner={owner}
-  canEdit={canEdit}
+      showVersions={showVersions}
+      versionsList={versionsList}
+      selectedVersion={selectedVersion}
+      previewEditorRef={previewEditorRef}
+      setShowVersions={setShowVersions}
+      loadVersionContent={loadVersionContent}
+      restoreVersion={restoreVersion}
+      setSelectedVersion={setSelectedVersion}
+      page={page}
+      setPage={setPage}
+      hasMore={hasMore}
+      owner={owner}
+      canEdit={canEdit}
     />
   );
 }
