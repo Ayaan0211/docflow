@@ -9,7 +9,7 @@
 
 ## Project Description
 
-> Provide a detailed description of your app (REMOVE THIS AFTER)
+> Docflow is a real-time collaborative document editor that works just like Google Docs, allowing multiple people to edit the same document at the same time. Users can use their google account to login. The editor includes all the essential formatting tools you'd expect - bold, italic, underline, headings, lists, tables, and even mathematical equations. You can insert images, add e-signatures with a drawing tool, and search through your documents to quickly find what you need. Usual shortcuts like ctrl+f to find, ctrl+z to undo and others work just like all google doc users are used to. Everything saves automatically as you type, and there's export options to download your work as a PDF or Word document. The version history feature lets you go back and see previous versions of your document, perfect for when you need to undo major changes or see what the document looked like last week. You can share documents with specific people and control whether they can edit or just view your work. The app works smoothly even when multiple people are typing at once so you'll never lose your work or have conflicts between edits. There are ready made templates for everyone to use or you can simply import PDFs. 
 
 ## Development
 
@@ -108,7 +108,7 @@
 
 1. Getting the WebRTC to connect between clients and server. This was really hard as instead of using Y.js or websockets we opted to use WebRTC. In addition, insteaf of P2P, we opted to use Multipoint Control Unit (MCU). Learning about turn and ice servers to allow communication between data channels was hard (we also had to learn about concepts like SDP responses between channels), as well as having a WebRTC data connection in the backend as WebRTC's main focus isn't server-side usage. 
 2. Getting the real-time syncs was a major challenging part of this project, aside from having the inital connections being handled correctly, correclty syncing deltas across all users took a lot of time. We had to implement our own transformation logic use quill's transform functions instead of using a library like shareDB to sync edits in real time (shareDB worked well with Y.js, so we could not use it), load logic (snapshots), leave logic, etc.
-3. Add this you guys
+3. Creating a reliable versioning system required work on both ends of the stack. On the backend, we store fully serialized Quill Deltas for every saved version, compare versions using `lodash.isequal`, and maintain incremental version numbers while avoiding duplicate saves. On the frontend, we built UI flows for restoring versions, previewing snapshots, and replacing the editor state cleanly without breaking the live WebRTC session. Ensuring restored versions integrated safely with ongoing real-time edits was one of the hardest architectural problems in the project.
 
 ## Contributions
 
@@ -118,6 +118,13 @@
 >   - All database, deployment, Github (Actions) logic.
 >   - All backend code (HTTP routes, third-party API calls) except for export PDF http routes.
 >   - WebRTC (frontend/backend; joining, leaving, real-time sync, snapshots) logic.
+
+> - Amaan Batla
+>   - Created login/signup page with the UI
+>   - Worked with the text editor to add features from quill based on documentation like Katex, E-signature and etc
+
+> - Ayaan Islam
+>   - TODO 
 
 ## One more thing? 
 
