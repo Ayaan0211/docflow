@@ -376,8 +376,9 @@ export default function Home() {
               <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-2 mb-3">
                 <p className="text-sm">
                   <strong>⚠️ Note:</strong> Only PDF files are supported.
-                  Formatting may not be fully preserved.
                 </p>
+                <p className="text-sm">Formatting may not be fully preserved.</p>
+                <p className="text-sm">Simple text documents, no images.</p>
               </div>
 
               <input
