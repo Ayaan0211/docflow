@@ -35,7 +35,6 @@
 >   - For uploading files to be processed into editable documents we use `multer` to handle uploading and third-party API call to `openAI` to process (we found better success with `openAI` than OCR models). We also use libraries like `path` to help parse filenames and other information.
 > - **Most HTTP Routes**
 >   - Most HTTP routes consist a lot of atabase querying using `pg`. We also use `Delta` from `quill-delta` in conjunction with `isEqual` from `lodash.isequal` to help see notice differences between old versions of documents and new versions.
-> - **Export PDF**
 > - **PDF Export (PDFKit)**
 >   - Creates a `PDFDocument` and streams it directly to the response.
 >   - Converts Quill Delta text (`op.insert`) into PDF text blocks.
