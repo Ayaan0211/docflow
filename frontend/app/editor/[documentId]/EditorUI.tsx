@@ -164,10 +164,12 @@ export default function EditorUI({
       {/* Main Editor UI — fades in after loading */}
       <div
         ref={containerRef}
-        className={`flex flex-col ${isFullscreen ? "h-screen" : "min-h-screen"} bg-gray-50`}
+        className={`flex flex-col ${
+          isFullscreen ? "h-screen" : "min-h-screen"
+        } bg-gray-50`}
         style={{
-          transition: 'opacity 700ms',
-          opacity: isEditorLoading ? 0 : 1
+          transition: "opacity 700ms",
+          opacity: isEditorLoading ? 0 : 1,
         }}
       >
         {/* Header */}
@@ -199,16 +201,16 @@ export default function EditorUI({
                 Export
               </button>
               {showExportMenu && (
-                <div className="absolute left-0 mt-2 w-44 bg-white text-gray-900 border border-gray-300 rounded-md shadow-lg z-50">
+                <div className="absolute left-0 mt-2 p-4 w-44 bg-gray-300 text-gray-900 border border-gray-300 rounded-md shadow-lg z-50">
                   <button
                     onClick={handleExportPDF}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 mb-2 text-sm hover:bg-gray-100"
                   >
                     Export as PDF
                   </button>
                   <button
                     onClick={handleExportDOCX}
-                    className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 mb-2 text-sm hover:bg-gray-100"
                   >
                     Export as DOCX
                   </button>
@@ -259,8 +261,15 @@ export default function EditorUI({
                   <button
                     onClick={() => setIsEditingTitle(true)}
                     className="px-2 py-1 text-xs hover:bg-gray-800 rounded transition"
+                    title="Edit Title"
                   >
-                    Edit
+                    <Image
+                      className="inline-block"
+                      src="/pencil.png"
+                      alt="Edit Title"
+                      width={15}
+                      height={15}
+                    />
                   </button>
                 )}
               </>
@@ -274,7 +283,13 @@ export default function EditorUI({
                 className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
                 title="Undo (Ctrl+Z)"
               >
-                Undo
+                <Image
+                  className="inline-block"
+                  src="/undo.png"
+                  alt="Undo"
+                  width={15}
+                  height={15}
+                />
               </button>
             )}
             {canEdit && (
@@ -283,7 +298,13 @@ export default function EditorUI({
                 className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
                 title="Redo (Ctrl+Y)"
               >
-                Redo
+                <Image
+                  className="inline-block"
+                  src="/redo.png"
+                  alt="Redo"
+                  width={15}
+                  height={15}
+                />
               </button>
             )}
 
@@ -292,13 +313,36 @@ export default function EditorUI({
               className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
               title="Find (Ctrl+F)"
             >
-              Search
+              <Image
+                className="inline-block"
+                src="/search.png"
+                alt="Search"
+                width={15}
+                height={15}
+              />
             </button>
             <button
               onClick={toggleFullscreen}
               className="px-3 py-2 text-sm font-medium bg-gray-800 hover:bg-gray-700 rounded-md transition"
+              title={isFullscreen ? "Minimize" : "Maximize"}
             >
-              {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              {isFullscreen ? (
+                <Image
+                  className="inline-block"
+                  src="/minimize.png"
+                  alt="Minimize Screen"
+                  width={15}
+                  height={15}
+                />
+              ) : (
+                <Image
+                  className="inline-block"
+                  src="/expand.png"
+                  alt="Maximize Screen"
+                  width={15}
+                  height={15}
+                />
+              )}
             </button>
           </div>
         </div>
@@ -359,7 +403,9 @@ export default function EditorUI({
               max="5"
               value={tableRows}
               onChange={(e) =>
-                setTableRows(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))
+                setTableRows(
+                  Math.min(5, Math.max(1, parseInt(e.target.value) || 1))
+                )
               }
               className="w-16 px-2 py-1 bg-gray-800 text-white border border-gray-600 rounded"
               placeholder="Rows"
@@ -371,7 +417,9 @@ export default function EditorUI({
               max="5"
               value={tableCols}
               onChange={(e) =>
-                setTableCols(Math.min(5, Math.max(1, parseInt(e.target.value) || 1)))
+                setTableCols(
+                  Math.min(5, Math.max(1, parseInt(e.target.value) || 1))
+                )
               }
               className="w-16 px-2 py-1 bg-gray-800 text-white border border-gray-600 rounded"
               placeholder="Cols"
@@ -420,7 +468,8 @@ export default function EditorUI({
                           key={version.version_id}
                           onClick={() => loadVersionContent(version.version_id)}
                           className={`rounded-lg p-3 cursor-pointer border-1 ${
-                            selectedVersion?.document?.version_id === version.version_id
+                            selectedVersion?.document?.version_id ===
+                            version.version_id
                               ? "bg-blue-100 border-blue-500 border-2"
                               : "bg-gray-100 border-gray-500"
                           }`}
@@ -442,11 +491,16 @@ export default function EditorUI({
                     <div className="mt-4 pt-4 px-4 border-t border-gray-300">
                       <button
                         className="w-full mb-2 !bg-green-600"
-                        onClick={() => restoreVersion(selectedVersion.document?.version_id)}
+                        onClick={() =>
+                          restoreVersion(selectedVersion.document?.version_id)
+                        }
                       >
                         Restore Version
                       </button>
-                      <button className="w-full !bg-gray-300" onClick={() => setSelectedVersion(null)}>
+                      <button
+                        className="w-full !bg-gray-300"
+                        onClick={() => setSelectedVersion(null)}
+                      >
                         Close
                       </button>
                     </div>
@@ -457,20 +511,34 @@ export default function EditorUI({
                     <button
                       disabled={page === 1}
                       className={`px-4 py-2 rounded !bg-gray-500 ${
-                        page === 1 ? "opacity-40 !cursor-not-allowed !pointer-events-none" : "border border-white"
+                        page === 1
+                          ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                          : "border border-white"
                       }`}
                       onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                     >
-                      <Image src="/previous.png" alt="Previous" width={25} height={25} />
+                      <Image
+                        src="/previous.png"
+                        alt="Previous"
+                        width={25}
+                        height={25}
+                      />
                     </button>
                     <button
                       disabled={!hasMore}
                       className={`px-4 py-2 rounded !bg-gray-500 ${
-                        !hasMore ? "opacity-40 !cursor-not-allowed !pointer-events-none" : "border border-white"
+                        !hasMore
+                          ? "opacity-40 !cursor-not-allowed !pointer-events-none"
+                          : "border border-white"
                       }`}
                       onClick={() => setPage((prev) => prev + 1)}
                     >
-                      <Image src="/next.png" alt="Next" width={25} height={25} />
+                      <Image
+                        src="/next.png"
+                        alt="Next"
+                        width={25}
+                        height={25}
+                      />
                     </button>
                   </div>
                 </div>
@@ -482,9 +550,13 @@ export default function EditorUI({
           {showMathEditor && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full">
-                <h2 className="text-xl font-bold mb-4 text-black">Math Editor (LaTeX)</h2>
+                <h2 className="text-xl font-bold mb-4 text-black">
+                  Math Editor (LaTeX)
+                </h2>
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Enter LaTeX formula:</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Enter LaTeX formula:
+                  </label>
                   <textarea
                     value={mathLatex}
                     onChange={(e) => setMathLatex(e.target.value)}
@@ -495,12 +567,21 @@ export default function EditorUI({
                 </div>
                 <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-200 min-h-[80px] flex items-center justify-center">
                   <div>
-                    <p className="text-sm text-gray-600 mb-2 text-center">Preview:</p>
-                    <div className="text-center text-black text-lg" id="math-preview-container">
+                    <p className="text-sm text-gray-600 mb-2 text-center">
+                      Preview:
+                    </p>
+                    <div
+                      className="text-center text-black text-lg"
+                      id="math-preview-container"
+                    >
                       {mathLatex ? (
                         <span
                           ref={(el) => {
-                            if (el && typeof window !== "undefined" && (window as any).katex) {
+                            if (
+                              el &&
+                              typeof window !== "undefined" &&
+                              (window as any).katex
+                            ) {
                               try {
                                 (window as any).katex.render(mathLatex, el, {
                                   throwOnError: false,
@@ -513,13 +594,17 @@ export default function EditorUI({
                           }}
                         ></span>
                       ) : (
-                        <span className="text-gray-400 italic text-sm">Enter a formula to see preview</span>
+                        <span className="text-gray-400 italic text-sm">
+                          Enter a formula to see preview
+                        </span>
                       )}
                     </div>
                   </div>
                 </div>
                 <div className="mb-4 p-3 bg-blue-50 rounded">
-                  <p className="text-xs text-gray-700 mb-1 font-semibold">Common LaTeX Examples:</p>
+                  <p className="text-xs text-gray-700 mb-1 font-semibold">
+                    Common LaTeX Examples:
+                  </p>
                   <ul className="text-xs text-gray-600 space-y-1">
                     <li>
                       • Fraction:{" "}
@@ -529,13 +614,16 @@ export default function EditorUI({
                       </code>
                     </li>
                     <li>
-                      • Square root: <code className="bg-white px-1">\sqrt{"{x}"}</code>
+                      • Square root:{" "}
+                      <code className="bg-white px-1">\sqrt{"{x}"}</code>
                     </li>
                     <li>
-                      • Superscript: <code className="bg-white px-1">x^{"{2}"}</code>
+                      • Superscript:{" "}
+                      <code className="bg-white px-1">x^{"{2}"}</code>
                     </li>
                     <li>
-                      • Subscript: <code className="bg-white px-1">x_{"{1}"}</code>
+                      • Subscript:{" "}
+                      <code className="bg-white px-1">x_{"{1}"}</code>
                     </li>
                     <li>
                       • Sum:{" "}
@@ -577,7 +665,9 @@ export default function EditorUI({
           {showSignature && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white p-6 rounded-lg shadow-xl">
-                <h2 className="text-xl font-bold mb-4 text-black">E-Signature</h2>
+                <h2 className="text-xl font-bold mb-4 text-black">
+                  E-Signature
+                </h2>
                 <canvas
                   ref={signatureCanvasRef}
                   width={500}
@@ -589,10 +679,16 @@ export default function EditorUI({
                   onMouseLeave={stopDrawing}
                 />
                 <div className="flex gap-3 mt-4">
-                  <button onClick={clearSignature} className="px-4 py-2 bg-gray-500 text-white rounded-md">
+                  <button
+                    onClick={clearSignature}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-md"
+                  >
                     Clear
                   </button>
-                  <button onClick={saveSignature} className="px-4 py-2 bg-blue-600 text-white rounded-md">
+                  <button
+                    onClick={saveSignature}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md"
+                  >
                     Done
                   </button>
                   <button
@@ -613,12 +709,16 @@ export default function EditorUI({
           <div className="flex-1 overflow-auto p-6">
             <div className="max-w-4xl mx-auto">
               {/* Main Editor */}
-              <div ref={editorRef} className="bg-white border rounded-lg shadow-sm min-h-[500px]" />
+              <div
+                ref={editorRef}
+                className="bg-white border rounded-lg shadow-sm min-h-[500px]"
+              />
               {/* Version Editor */}
               {selectedVersion && (
                 <div className="mt-6 p-4 border-2 border-blue-500 rounded-lg bg-blue-100">
                   <h3 className="font-bold text-black mb-4">
-                    Previewing Version {selectedVersion.document?.version_number}
+                    Previewing Version{" "}
+                    {selectedVersion.document?.version_number}
                   </h3>
                   <div ref={previewEditorRef} />
                 </div>

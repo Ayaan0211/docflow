@@ -16,3 +16,10 @@ Unopened arrow: https://www.flaticon.com/free-icon/right-arrow_271228?term=next&
 Close arrow: https://www.flaticon.com/free-icon/arrow-down-sign-to-navigate_32195?term=down&page=1&position=2&origin=search&related_id=32195
 Next icon: https://www.flaticon.com/free-icon/next_318275?term=next&page=1&position=2&origin=search&related_id=318275
 Previous icon: https://www.flaticon.com/free-icon/previous_318276?term=previous&page=1&position=3&origin=search&related_id=318276
+Undo icon: https://www.flaticon.com/free-icon/undo-circular-arrow_44426?term=undo&page=1&position=1&origin=search&related_id=44426
+Redo icon: https://www.flaticon.com/free-icon/redo-arrow-symbol_44650?term=redo&page=1&position=1&origin=search&related_id=44650
+Pencil icon: https://www.flaticon.com/free-icon/pencil_1828911?term=pencil&page=1&position=2&origin=search&related_id=1828911
+Search icon: https://www.flaticon.com/free-icon/magnifying-glass_151773?term=search&page=1&position=4&origin=search&related_id=151773
+Minimize icon: https://www.flaticon.com/free-icon/music_10413820?term=minimize&page=1&position=28&origin=search&related_id=10413820
+Maximize icon: https://www.flaticon.com/free-icon/fullscreen_3495583?term=maximize&page=1&position=15&origin=search&related_id=3495583
+Save icon: https://www.flaticon.com/free-icon/diskette_2874050?term=save&page=1&position=9&origin=search&related_id=2874050
