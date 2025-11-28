@@ -26,8 +26,8 @@
 >   - The toolbar includes formatting tools, tables, math, images, and custom editor controls.
 >
 >  - **Math & Formula Support (KaTeX)**
->   - Inline and block LaTeX equations are rendered using **KaTeX**.
->   - A math editor modal allows users to type LaTeX and insert formulas as Quill embeds.
+>    - Inline and block LaTeX equations are rendered using **KaTeX**.
+>    - A math editor modal allows users to type LaTeX and insert formulas as Quill embeds.
 
 > - **E-Signature**
 >   - A canvas-based modal lets users draw signatures with mouse or touch, which are inserted as images into the editor.
