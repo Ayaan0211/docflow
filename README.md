@@ -17,9 +17,44 @@
 > 
 > Docflow is built using fully JavaScript/TypeScript. The frontend is build with Next.js (React + TypeScript), and the backend is built with Node.js (Typescript), with using Postgres as our database.
 
-> **On the frontend, Docflow runs a next.js server.**
-> - **Add Sections Regarding Frontend Stuff**
->   - Add Points about said Section
+> - **Frontend (Next.js + React + Typescript)**
+>   - The app’s UI is built with **Next.js (App Router)** and **client-side React** components. We use hooks like `useState`, `useEffect`, `useRef`, and `useParams` for state, lifecycle, and routing.
+>   - The editor runs entirely client-side because Quill, KaTeX, and WebRTC do not work in SSR environments.
+
+> - **Rich Text Editor (Quill)**
+>   - Quill is the core text editor, extended with modules for history, tables, formulas, cursors, and custom keyboard behavior.
+>   - The toolbar includes formatting tools, tables, math, images, and custom editor controls.
+>
+>  - **Math & Formula Support (KaTeX)**
+>   - Inline and block LaTeX equations are rendered using **KaTeX**.
+>   - A math editor modal allows users to type LaTeX and insert formulas as Quill embeds.
+
+> - **E-Signature**
+>   - A canvas-based modal lets users draw signatures with mouse or touch, which are inserted as images into the editor.
+
+> - **Search, Tables, and UX Tools**
+>   - Client-side text search, match navigation, and highlighting use Quill text + formatting APIs.
+>   - Tables support row/column actions, nested tables, and custom selection interactions.
+>   - Keyboard shortcuts, fullscreen mode, print mode, and autosaving are implemented as UI helpers on top of the editor.
+  
+> - **Routing & UX Flow**  
+>   - Home/dashboard and auth pages run entirely in the browser: session check → redirect, modals for create/upload/share, and client-side pagination.
+
+> - **State & Components**  
+>   - Local React state + refs for UI (modals, forms, file selection, templates, shared users, pagination, toasts/message box).  
+>   - Presentational layout uses small, focused components and modal patterns (create doc, file upload, options, share).
+
+> - **API client (client-side wrapper)**  
+>   - Lightweight `apiFetch` wrapper around `fetch` (JSON handling, credentials).  
+>   - Uses `FormData` for file uploads and `navigator.sendBeacon` for reliable unload signals where needed.
+
+> - **Document UX features**  
+>   - Templates system (pre-seeded Quill delta content), file-upload flow (PDF → editable doc), create/rename/delete/share flows, and visual doc cards with permissions UI.
+
+> - **Auth & Social Login**  
+>   - Email/password signup & signin forms with inline validation and UX toasts.  
+>   - Google OAuth initiated via a client redirect to the provider.
+
 > - **Beacons**
 >   - One thing we realized is that when exiting the tab, closing the browser or going home while being in live editor is that it leaves the channel open in the backend (even if we close it on client side). Using a normal get request to the backend to close the connection in the backend did not suffice because the request always fails to send when essentially `unload` occurs. This leads to determinatal memory leaks and expensive memory usage in the backend having all these rooms and open data channels, as well as messing up any saves of the document from the live editing session. To counteract this, we had to use `beacons` to send a post request to the backend to leave the room/close the WebRTC data channel on the backend. `Beacons` were almost guarnteed to alwyas send even in the case of unloads.
 
