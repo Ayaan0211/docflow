@@ -1,81 +1,81 @@
-# C09 Docs
+# DocFlow 
+
+## Links
+
+- Deployed URL: https://project-docflow.amazingcloud.space/
+
+> Provide the link to your youtube video. Please make sure the link works. (REMOVE THIS AFTER)
+- Video URL: 
 
 ## Project Description
-Our project is essentially a clone of Google Docs and its features. The web application will allow users to create, save, and delete text documents, alongside the ability to collaborate with other users in real-time. Each user can have multiple documents that can be shared with other registered users with links or permissions. The focus of this project is the build an application that implements real-time updates with data that persists for numerous users at once.
 
----
+> Provide a detailed description of your app (REMOVE THIS AFTER)
 
-## Key Features for Beta Version
+## Development
 
-### User Authentication
-- Local login alongside third-party login with Google
+> Leaving deployment aside, explain how the app is built. Please describe the overall code design and be specific about the programming languages, framework, libraries and third-party api that you have used. (REMOVE THIS AFTER)
+> 
+> Docflow is built using fully JavaScript/TypeScript. The frontend is build with Next.js (React + TypeScript), and the backend is built with Node.js (Typescript), with using Postgres as our database.
 
-### Document Storage and Retrieval
-- Save and fetch document content from the database specific to each user  
-- Create, rename, and delete documents
+> **On the frontend, Docflow runs a next.js server.**
+> - **Add Sections Regarding Frontend Stuff**
+>   - Add Points about said Section
+> - **Beacons**
+>   - One thing we realized is that when exiting the tab, closing the browser or going home while being in live editor is that it leaves the channel open in the backend (even if we close it on client side). Using a normal get request to the backend to close the connection in the backend did not suffice because the request always fails to send when essentially `unload` occurs. This leads to determinatal memory leaks and expensive memory usage in the backend having all these rooms and open data channels, as well as messing up any saves of the document from the live editing session. To counteract this, we had to use `beacons` to send a post request to the backend to leave the room/close the WebRTC data channel on the backend. `Beacons` were almost guarnteed to alwyas send even in the case of unloads.
 
-### Rich Text Editor
-- Have all basic text formatting (bold, underline, etc.)  
-- Auto-save functionality?
+> **On the backend, Docflow runs an node.js server using Express (using `router` to help modularize code).** 
+> - **Database Connection**
+>   - For all initializations, queries and CRUD logic we use `pg` as a gateway to our Postgres instance.
+> - **Middleware**
+>   - We use `validator` for sanitizing all data being sent in the request body.
+> - **Authentication**
+>   - For Local Auth we use `bcrypt` for handling salt + hash, and hash compare functions.
+>   - For OAuth (Google) we use `Passport`.
+> - **Document Uploads**
+>   - For uploading files to be processed into editable documents we use `multer` to handle uploading and third-party API call to `openAI` to process (we found better success with `openAI` than OCR models). We also use libraries like `path` to help parse filenames and other information.
+> - **Most HTTP Routes**
+>   - Most HTTP routes consist a lot of atabase querying using `pg`. We also use `Delta` from `quill-delta` in conjunction with `isEqual` from `lodash.isequal` to help see notice differences between old versions of documents and new versions.
+> - **Export PDF** AMANN do this pls
+> - **WebRTC**
+>   - For handling WebRTC data channel binding, SDP handling, and Ice servers we used `@koush/wrtc` (We had to use this, as many libraries didn't work with macOS, which two out of three memebers were working locally on).
+>   - For handling random UUID we used `crypto`.
+>   - For handling finding differences (if they exist) between different versions when saving we use `isEqual` from `lodash.isequal`.
+>   - We use `Delta` from `quill-delta` extensively to make our own transformation logic using their `compose` and `transform` functions.
+> - **OpenAI**
+>   - We use `openAI` library alongside `fs` and `path` to send uploaded files to GPT LLM's to process PDF's to quill-delta operations.
 
-### Real-Time Collaboration
-- Ability to have multiple users editing the same files with real-time updates for all users editing
+> Postgres Database
+> - **Tables**
+>   - Docflow works off of four tables: `users`, `documents`, `shared_documents`, and `document_versions`. All of the tables were made with proper primary keys, foreign keys, constraints (delete constraints like `cascade` and attribute checks).
+>   - Aside from the automatic indexes Postgres makes, Docflows includes four further indexes to further optimize database CRUD operations.
 
-### Deployment
-- Fully deploy on the team’s VM.
+> Turn Servers
+> - **Custom Turn Server**
+>   - As our VM's backend is only reachable internally through docker containers and not exposed to the real world, we have to use custom turn servers to help connect the backend WebRTC instance to clients. In addition, in the case that clients are behind restrictive firewalls or NATs. We epxlicity made a docker container for our turn server (using `coturn/coturn` docker image) and expose a specific port. For stun servers we opted to use `Google's` free stun server.
 
----
+## Deployment
 
-## Additional Features for Final Version
+> We deployed our application using a NGINX reverse proxy for our node.js backend and next.js frontend. The entire stack runs on isolated docker containers (with only the nginx and turn server containers exposed to the world, all other containers are blocked from outside connections and can only communicate internally). Also, we used LetsEncypt to obtain valid certificates for our website.
+> We also integrated github actions in our repository to create a through CI/CD pipeline. It's integrated such that on every push to main it will tear down the the old docker containers, update the code, rebuild docker images, and redeploy the website. This made it so we never have to manually re-deploy anything, which can cause errors when done with multiple people working on the project. In addition, this mean that the website had minimal downtime because of the automatic deplyoment.
 
-### Document Sharing
-- Create shareable links to view and/or edit documents
 
-### Version Tracking
-- Be able to view and go back to previous versions of documents
+## Challenges
 
-### Comments
-- Add comments/suggestions to documents
+>What is the top 3 most challenging things that you have learned/developed for you app? Please restrict your answer to only three items. 
 
-### Clean UI/UX with external libraries
+1. Getting the WebRTC to connect between clients and server. This was really hard as instead of using Y.js or websockets we opted to use WebRTC. In addition, insteaf of P2P, we opted to use Multipoint Control Unit (MCU). Learning about turn and ice servers to allow communication between data channels was hard (we also had to learn about concepts like SDP responses between channels), as well as having a WebRTC data connection in the backend as WebRTC's main focus isn't server-side usage. 
+2. Getting the real-time syncs was a major challenging part of this project, aside from having the inital connections being handled correctly, correclty syncing deltas across all users took a lot of time. We had to implement our own transformation logic use quill's transform functions instead of using a library like shareDB to sync edits in real time (shareDB worked well with Y.js, so we could not use it), load logic (snapshots), leave logic, etc.
+3. Add this you guys
 
-### Exporting files and possibly importing files
+## Contributions
 
-### Spell Check
+> Describe the contribution of each team member to the project. Please provide the full name of each team member (but no student number).
 
----
+> - Milen Thomas
+>   - All database, deployment, Github (Actions) logic.
+>   - All backend code (HTTP routes, third-party API calls) except for export PDF http routes.
+>   - WebRTC (frontend/backend; joining, leaving, real-time sync, snapshots) logic.
 
-## Tech Stack
-- **Frontend (SPA):** Next.js  
-- **Backend:** Express.js  
-- **TextEditor:** Quils.js  
-- **Real-Time Updates:** Socket.io (JS library)  
-- **Database:** PostgreSQL  
-- **Auth:** NextAuth.js  
-- **Deployment:** Docker + Nginx Reverse Proxy on VM
+## One more thing? 
 
----
-
-## Top 5 Technical Challenges
-
-### Real-Time Updates
-Configuring websockets to handle multiple users editing the same document will be really difficult. We have to make sure each user writes are being recorded, processed, and displayed to every user on the document. We also have to make sure it doesn’t get overwritten by other user inputs.
-
-### Database Logic
-We have to make sure that sharing permission persists in the database, allowing users who share their document with other users to actually access and/or work on said document. Also, it should be able to handle multiple documents for a user to keep in storage, and be able to work on multiple documents in different tabs without loss of data/features.
-
-### Version Tracking
-We have to set up a measure as to what defines a version to showcase the version history of a document, being mindful of the fact that multiple people can edit the document. We have to store and be able to retrieve and display all the versions of a document reliably and efficiently.
-
-### Text Editor Features
-We have to decide what and how many text editor features we implement into our application. We need to decide if it will be worth it to implement advanced features such as converting to different file types (ie, .pdf, .docx, .txt, etc.), formatting elements, font options (size, colour, styles), etc.
-
-### Scalability
-As document size or active users increase, we need to make sure our application does not degrade performance-wise. This may require experimenting with options such as modifying database writes/pulls frequency, document rendering, etc.
-
----
-
-## Members
-- Milen Thomas
-- Ayaan Islam
-- Amaan Batla
+> Any additional comment you want to share with the course staff
