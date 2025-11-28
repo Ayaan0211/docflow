@@ -376,7 +376,7 @@ export default function Home() {
               <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-2 mb-3">
                 <p className="text-sm">
                   <strong>⚠️ Note:</strong> Only PDF files are supported.
-                  Formatting may not be fully preserved
+                  Formatting may not be fully preserved.
                 </p>
               </div>
 
@@ -387,10 +387,21 @@ export default function Home() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
+                    //Max 1MB file size
+                    const maxSize = 1 * 1024 * 1024;
+                    if (file.size > maxSize) {
+                      showMessage("Error: File size must be less than 1MB");
+                      e.target.value = "";
+                      return
+                    }
                     setSelectedFile(file);
                   }
                 }}
               />
+
+              <div className="pt-2">
+                <p className="text-sm text-gray-400">Max 1MB file size</p>
+              </div>
 
               <div className="flex justify-end mt-4">
                 <button
