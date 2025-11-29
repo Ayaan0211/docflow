@@ -122,8 +122,7 @@ export default function Home() {
     const data = { ops: ops };
 
     try {
-      const newDoc = await api.documents.create(docTitle, data);
-      console.log("Document created:", newDoc);
+      await api.documents.create(docTitle, data);
       setShowModal(false);
       setDocTitle("");
       await fetchDocuments();
@@ -144,8 +143,7 @@ export default function Home() {
     setSelectedFile(null);
 
     try {
-      const response = await api.documents.upload(selectedFile);
-      console.log("Document uploaded", response);
+      await api.documents.upload(selectedFile);
       await fetchDocuments();
     } catch (error) {
       console.error("Error uploading document:", error);
@@ -158,7 +156,6 @@ export default function Home() {
   const handleDeleteDocument = async (documentId: string) => {
     try {
       await api.documents.delete(documentId);
-      console.log("Document deleted:", documentId);
       await fetchDocuments();
     } catch (error) {
       console.error("Error deleting document:", error);
@@ -170,7 +167,6 @@ export default function Home() {
 
     try {
       await api.documents.updateTitle(selectDocId, renameTitle);
-      console.log("Document renamed:", selectDocId);
       setRenameTitle("");
       setSelectDocId(null);
       await fetchDocuments();
@@ -199,7 +195,6 @@ export default function Home() {
 
     try {
       await api.documents.share(selectDocId, shareEmail, sharePermission);
-      console.log("Document shared:", selectDocId);
       setShareEmail("");
       setSharePermission("view");
       setUserPage(1);
@@ -228,8 +223,6 @@ export default function Home() {
   ) => {
     try {
       await api.documents.share(selectDocId!, userEmail, newPermission);
-      console.log("Updated permission for", userEmail);
-
       await loadSharedUsers(selectDocId!, userPage);
     } catch (error) {
       console.error("Error updating permission:", error);
@@ -657,7 +650,7 @@ export default function Home() {
                                       await loadSharedUsers(selectDocId, userPage)
                                       
                                     } catch (error) {
-                                      console.log("Error removing user", error);
+                                      console.error("Error removing user", error);
                                     }
                                   }}
                                 >
