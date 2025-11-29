@@ -12,8 +12,6 @@
 
 ## Development
 
-> Leaving deployment aside, explain how the app is built. Please describe the overall code design and be specific about the programming languages, framework, libraries and third-party api that you have used. (REMOVE THIS AFTER)
-> 
 > Docflow is built using fully JavaScript/TypeScript. The frontend is build with Next.js (React + TypeScript), and the backend is built with Node.js (Typescript), with using Postgres as our database.
 
 > - **Frontend (Next.js + React + Typescript)**
@@ -102,8 +100,6 @@
 
 
 ## Challenges
-
->What is the top 3 most challenging things that you have learned/developed for you app? Please restrict your answer to only three items. 
 
 1. Getting the WebRTC to connect between clients and server. This was really hard as instead of using Y.js or websockets we opted to use WebRTC. In addition, insteaf of P2P, we opted to use Multipoint Control Unit (MCU). Learning about turn and ice servers to allow communication between data channels was hard (we also had to learn about concepts like SDP responses between channels), as well as having a WebRTC data connection in the backend as WebRTC's main focus isn't server-side usage. 
 2. Getting the real-time syncs was a major challenging part of this project, aside from having the inital connections being handled correctly, correclty syncing deltas across all users took a lot of time. We had to implement our own transformation logic use quill's transform functions instead of using a library like shareDB to sync edits in real time (shareDB worked well with Y.js, so we could not use it), load logic (snapshots), leave logic, etc.
