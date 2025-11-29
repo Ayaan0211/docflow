@@ -707,7 +707,6 @@ export default function Editor() {
       const response = await api.documents.getById(documentId);
       if (!editorRef.current || !quillRef.current) return;
       setTitle(response.document.title);
-      console.log(response);
       setIsOwner(response.isOwner);
       setCanEdit(response.canEdit)
       if (!response.canEdit && quillRef.current) {
@@ -730,7 +729,7 @@ export default function Editor() {
       await api.documents.updateContent(documentId, content);
       setLastSaved(new Date());
     } catch (error) {
-      console.log("Error Saving", error);
+      console.error("Error Saving", error);
     } finally {
       setIsSaving(false);
     }
@@ -1044,7 +1043,6 @@ export default function Editor() {
       const response = await api.versions.getAll(documentId, page, 5);
       setVersionsList(response.versions || []);
       setHasMore(response.hasNext)
-      console.log(response)
     } catch (err) {
       console.error("Failed to load versions", err);
     }
