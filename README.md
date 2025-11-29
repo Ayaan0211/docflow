@@ -4,8 +4,7 @@
 
 - Deployed URL: https://project-docflow.amazingcloud.space/
 
-> Provide the link to your youtube video. Please make sure the link works. (REMOVE THIS AFTER)
-- Video URL: 
+- Video URL: https://www.youtube.com/watch?v=z7WbJDvFe5U
 
 ## Project Description
 
@@ -124,7 +123,9 @@
 >   - Worked with the text editor to add features from quill based on documentation like Katex, E-signature and etc
 
 > - Ayaan Islam
->   - TODO 
+>   - Created Home Page with UI, including document templates and document sharing
+>   - Added Version History UI to editor page
+>   - Created video demo
 
 ## One more thing? 
 
