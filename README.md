@@ -126,3 +126,4 @@
 ## One more thing? 
 
 > Sources Cited: Claude and ChatGPT and https://quilljs.com/docs/api
+> Thank you to the teaching staff for a great semester! We learned lots of new and cool things and are super excited to be able to use these concepts in the future. We hope you enjoy our project!
