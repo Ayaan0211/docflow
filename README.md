@@ -69,13 +69,13 @@
 >   - Most HTTP routes consist a lot of atabase querying using `pg`. We also use `Delta` from `quill-delta` in conjunction with `isEqual` from `lodash.isequal` to help see notice differences between old versions of documents and new versions.
 > - **PDF Export (PDFKit)**
 >   - Creates a `PDFDocument` and streams it directly to the response.
->   - Converts Quill Delta text (`op.insert`) into PDF text blocks.
->   - Writes the title, then body content, and finalizes with `pdfDoc.end()`.
+>   - Converts Quill Delta text (`op.insert`) into PDF text blocks and then exports.
+>   - Note: Only works with text and not images.
 >
 > - **DOCX Export (docx library)**
 >   - Builds a DOCX file in memory using `Paragraph` + `TextRun`.
->   - Applies formatting (bold, italics, underline) from Delta attributes.
->   - Uses `Packer.toBuffer()` to generate the file and sends it as a download.
+>   - Applies formatting (bold, italics, underline) from Delta attributes then downloads it.
+>   - Note: Only works with text and not images
 > - **WebRTC**
 >   - For handling WebRTC data channel binding, SDP handling, and Ice servers we used `@koush/wrtc` (We had to use this, as many libraries didn't work with macOS, which two out of three memebers were working locally on).
 >   - For handling random UUID we used `crypto`.
