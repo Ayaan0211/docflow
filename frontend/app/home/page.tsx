@@ -231,7 +231,6 @@ export default function Home() {
 
   return (
     <>
-      <div id="message-box">Message Placeholder</div>
       {/* Header */}
       <header className="grid grid-cols-3 items-center px-4 py-6 shadow-md sticky top-0">
         <div className="flex items-center gap-2 ml-2">

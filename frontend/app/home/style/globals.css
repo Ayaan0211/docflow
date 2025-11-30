@@ -148,7 +148,7 @@ h1, h2 {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Modal animations (AI Generated) */
+/* Modal animations  */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -177,7 +177,7 @@ h1, h2 {
   animation: slideUp 0.3s ease-out;
 }
 
-/* Tooltip styles (AI Generated)*/
+/* Tooltip styles */
 .tooltip-container {
   position: relative;
   display: inline-block;
@@ -241,7 +241,7 @@ h1, h2 {
   50% { border-color: orange; }
 }
 
-/* Rainbow animation (AI generated) */
+/* Rainbow animation */
 @keyframes spin-slow {
   from {
     transform: rotate(0deg);
