@@ -125,4 +125,4 @@
 
 ## One more thing? 
 
-> Any additional comment you want to share with the course staff
+> Sources Cited: Claude and ChatGPT and https://quilljs.com/docs/api
